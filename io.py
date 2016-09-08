@@ -1,8 +1,9 @@
+from imgcmp import env
 import h5py
 
 def write_h5(fn, dct, mode='w', **kwds):
     fh = h5py.File(fn, mode=mode, **kwds)
-    for key,val in dct.iteritems():
+    for key,val in dct.items():
         _key = key if key.startswith('/') else '/'+key
         fh[_key] = val
     fh.close()
@@ -18,6 +19,7 @@ def read_h5(fn):
     fh.visititems(get)
     fh.close()
     return dct
+
 
 def read_db(dbfile):
     db = read_h5(dbfile)

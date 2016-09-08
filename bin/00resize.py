@@ -4,20 +4,21 @@
 # handles KeyboardInterrupt (CTRL-C) *at all* and does this without need for
 # any extra hassle and awkward try..except stunts. Thank you!
 #
-# verbose: use -v know which image is processed. With multiprocessing, the order
-# is messed up a bit but you will still get a rough estimate of how many images
-# are left, assuming all images are equal in size and thus all processes are
-# approximately equally fast.
+# verbose: use -v to know which image is processed. With multiprocessing, the
+# order is messed up a bit but you will still get a rough estimate of how many
+# images are left, assuming all images are equal in size and thus all processes
+# are approximately equally fast.
 # 
 # multiprocessing: We use Python's multiprocessing instead of the default
 # imagemagick OpenMP parallelization since the former is a little faster -- and
 # well .. coding and benchmarking is fun!.
 # 
-# wall clock times, dual-core box
+# wall clock times, dual-core box, using 
+#   export OMP_NUM_THREADS=<max OpenMP threads>
 # 
 #     multiprocessing, ncore = 1,2,4, max OpenMP threads = 1
 #
-#     $ for x in 1 2 4; do time ./00resize.py -n $x 20 files/*; done
+#     $ for x in 1 2 4; do time ./00resize.py -n $x 0.2 files/*; done
 #     
 #     real    1m15.663s     # 1
 #     real    0m38.577s     # 2  ***
@@ -25,7 +26,7 @@
 #     
 #     multiprocessing, ncore = 1,2,4, max OpenMP threads = 2
 #     
-#     $ for x in 1 2 4; do time ./00resize.py -n $x 20 files/*; done
+#     $ for x in 1 2 4; do time ./00resize.py -n $x 0.2 files/*; done
 #     
 #     real    0m46.304s     # 1  ***
 #     real    0m38.766s     # 2
@@ -41,15 +42,15 @@
 # ./configure --disable-openmp .
 
 import os, multiprocessing, subprocess, functools, argparse
-from imgcmp import cli
+from imgcmp import cli, env
 
-def _worker(tup, percent=None, tgtdir=None, nfiles=None, verbose=False):
+def _worker(tup, fraction=None, tgtdir=None, nfiles=None, verbose=False):
     idx, _src = tup
     src = os.path.abspath(_src)
     # /home/foo -> _home_foo -> home_foo
     tgt = os.path.join(tgtdir, src.replace('/','_')[1:])
     cmd = "convert -limit thread 1 -resize {}% -auto-orient {} {}".format(
-            percent, src, tgt)
+            fraction*100, src, tgt)
     if verbose >= 1:   
         print("{} of {}".format(idx+1, nfiles))
     if verbose >= 2:
@@ -59,13 +60,14 @@ def _worker(tup, percent=None, tgtdir=None, nfiles=None, verbose=False):
 if __name__ == '__main__':
     
     desc = """
-Resize images to PERCENT % with imagemagick's convert. Store them in dir TGTDIR
+Resize images to FRACTION*100 % with imagemagick's convert. Store them in dir TGTDIR
 with their full name with / replaced by _, such that /path/to/file.png becomes
 TGTDIR/path_to_file.png
 """
     parser = argparse.ArgumentParser(description=desc) 
-    parser.add_argument('percent', metavar='PERCENT', type=float,
-                        help='percent value for resizing')
+    parser.add_argument('fraction', metavar='FRACTION', type=float,
+                        help=r'fraction value for resizing (0..1), e.g. 0.25 '
+                             r'for 25 percent')
     parser.add_argument('files', metavar='FILE', nargs='+',
                         help='image file names')
     parser.add_argument('-t', '--tgtdir',
@@ -78,7 +80,7 @@ TGTDIR/path_to_file.png
                         help='increase verbosity level, -vv prints convert commands')
     args = parser.parse_args()
     worker = functools.partial(_worker, 
-                               percent=args.percent,
+                               fraction=args.fraction,
                                tgtdir=args.tgtdir,
                                nfiles=len(args.files),
                                verbose=args.verbose)

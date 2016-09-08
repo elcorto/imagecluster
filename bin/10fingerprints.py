@@ -1,12 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys, multiprocessing, functools, argparse
 from PIL import Image
+from imgcmp import calc, io, cli, env
 import numpy as np
-from imgcmp import calc, io, cli
 
 def _worker(tup, size_x=None, fpsdct=None):
-    print(tup)
     ii, name = tup     
     img = Image.open(name)
     fpsdct[ii] = calc.phash(img, 
@@ -25,7 +24,8 @@ Calculate fingerprint database.
     parser.add_argument('-x', dest='size_x',
                         default=8, type=int,
                         help='resize images to (size_x, size_x), fingerprints '
-                             'are then (size_x**2,) 1d arrays [%(default)s]')
+                             'are then (size_x**2,) 1d arrays; large = more '
+                             'features, more strict similarity [%(default)s]')
     parser.add_argument('-f', dest='dbfile',
                         default=cli.dbfile,
                         help='database HDF file [%(default)s]')
@@ -43,5 +43,7 @@ Calculate fingerprint database.
 
     # sort: order array to match file names in list `files`
     fps = np.array([fpsdct[ii] for ii in np.sort(fpsdct.keys())])
-    io.write_h5(args.dbfile, dict(files=args.files, fps=fps))    
+    # http://docs.h5py.org/en/latest/strings.html
+    files = np.array([f for f in args.files]).astype('S')
+    io.write_h5(args.dbfile, dict(files=files, fps=fps))    
 

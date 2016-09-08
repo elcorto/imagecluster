@@ -36,9 +36,9 @@
 # method = 2, diff to ref(1) = 0.135679761399
 # method = 3, diff to ref(1) = 0.0549413095836
 #
-# -> method=2 is probably best
+# -> method=2 is probably the best compromise between quality and speed
 
-
+from imgcmp import env
 import numpy as np
 import scipy.fftpack as fftpack
 from scipy.spatial import distance
@@ -56,6 +56,8 @@ def img2arr(img, size=(8,8), dtype=INT, resample=2):
     Parameters
     ----------
     img : PIL Image
+    size : (int, int)
+        size of square fingerprint array for `img`
     resample : int
         interpolation method, see help of ``PIL.Image.Image.resize``
     """
@@ -69,7 +71,7 @@ def ahash(img, size=(8,8)):
     ----------
     img : PIL image
     size : (int, int)
-        size of fingerprint array
+        size of square fingerprint array for `img`
     """
     pixels = img2arr(img, size=size)
     return (pixels > pixels.mean()).astype(INT)
@@ -94,14 +96,23 @@ def dhash(img, size=(8,8)):
     return (pixels[1:, :] > pixels[:-1, :]).astype(INT)
 
 
-def cluster(files, fps, frac=0.2, metric='hamming'):
+def cluster(files, fps, sim=0.2, metric='hamming'):
     """
     files : list of file names
-    fps : 
+    sim : float
+        similarity (1=max. allowed similarity, all images are considered
+        similar and are in one cluster, 0=zero similarity allowed, each image
+        is it's own cluster of size 1)
+    fps : 2d array (len(files), size[0]*size[1])
+        flattened fingerprints (1d array for each image), where `size` is the
+        argument to one of the *hash() functions 
     """
     dfps = distance.pdist(fps.astype(bool), metric)
+    # hierarchical/agglomerative clustering (Z = linkage matrix, construct
+    # dendrogram) 
     Z = hierarchy.linkage(dfps, method='average', metric=metric)
-    cut = hierarchy.fcluster(Z, t=dfps.max()*frac, criterion='distance')
+    # cut dendrogram, extract clusters
+    cut = hierarchy.fcluster(Z, t=dfps.max()*sim, criterion='distance')
     clusters = dict((ii,[]) for ii in np.unique(cut))
     for iimg,iclus in enumerate(cut):
         clusters[iclus].append(files[iimg])

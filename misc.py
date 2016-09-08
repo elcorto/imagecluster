@@ -23,10 +23,3 @@ def view_lst(lst):
     from pwtools.common import system
     cmd = 'qiv -fm ' + ' '.join(lst)
     system(cmd, wait=True)
-
-##def view_collection(
-
-##def hamming(arr1, arr2):
-##    a1 = arr1.flatten()
-##    a2 = arr2.flatten()
-##    return np.count_nonzero(a1 != a2)
