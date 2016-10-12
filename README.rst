@@ -64,10 +64,20 @@ We use a variant of the phash method -- a simple and fast way to calculate
 fingerprints. The package can detect images which are rather similar, e.g. the
 same scene photographed twice or more with some camera movement in between, or
 a scene with the same background and e.g. one person exchanged. Good parameter
-values to start with are ``size_x`` = 8 (``10fingerprints.py``) and
-similarity index 0.3 (``20cluster.py``). However, values above 0.3 will quickly
-recognize all sorts of images as equal and usually, results obtained with
-similarity > 0.5 are seldom useful.
+values are x=8 ... 16 (``10fingerprints.py -x``) and similarity index sim=0.1
+... 0.3 (``20cluster.py <sim>``). However, values above sim=0.3 will quickly
+recognize all sorts of images as equal and usually, results obtained with sim >
+0.5 are seldom useful. Next, the higher x, the more detailed and close to the
+original image the fingerprint is, since the original is squashed down to a x
+times x grayscale image, converted to binary (pixed is black or white), and
+flattened into a vector of x**2 length (the "fingerprint"). High values such as
+64 already result in detection of only extremely similar images, since too much
+information of the original image is kept. Instead, a value of x=2 is obviously
+useless because it reduces each image to a 2x2 matrix (and fingerprint vector of
+length 4) with almost no information from the original image left. So x=8 and
+sim=0.1 is roughly equivalent to x=16 and sim=0.3. Therefore, if you get too
+many "false positives" (images counted as similar when they are not), reduce
+sim or increase x.
 
 The original goal was to have a clustering based on classification of image
 *content* -- smth like: image A this an image of my kitchen; image B is also an
