@@ -48,6 +48,7 @@ Read fingerprints database, perform clustering.
         else:    
             cdct_multi[nn].append(x)
 
+    print("cluster dir: {}".format(cli.cluster_dr))
     print("items per cluster : number of such clusters")
     shutil.rmtree(cli.cluster_dr)
     for n_in_cluster in np.sort(list(cdct_multi.keys())):

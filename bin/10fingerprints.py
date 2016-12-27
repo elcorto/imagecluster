@@ -1,9 +1,11 @@
 #!/usr/bin/python3
 
-import sys, multiprocessing, functools, argparse
+import sys, multiprocessing, functools, argparse, os
 from PIL import Image
 from imgcmp import calc, io, cli, env
 import numpy as np
+pj = os.path.join
+
 
 def _worker(tup, size_x=None, fpsdct=None):
     ii, name = tup     
@@ -19,8 +21,11 @@ if __name__ == '__main__':
 Calculate fingerprint database.    
 """
     parser = argparse.ArgumentParser(description=desc) 
-    parser.add_argument('files', metavar='FILE', nargs='+',
-                        help='image file names')
+    parser.add_argument('files', metavar='FILE', nargs='*',
+                        default=[pj(cli.convert_dr, x) for x in \
+                                 os.listdir(cli.convert_dr)],
+                        help='image file names, [default: '
+                             '{}/*]'.format(cli.convert_dr))
     parser.add_argument('-x', dest='size_x',
                         default=8, type=int,
                         help='resize images to (size_x, size_x), fingerprints '

@@ -28,23 +28,30 @@ This will resize all images to 20% (factor 0.2) of their original size. Resized
 files are written to ``~/.imgcmp/convert/`` by default. Now, calculate the
 fingerprint database::
 
-    $ ./bin/10fingerprints.py ~/.imgcmp/convert/*
+    $ ./bin/10fingerprints.py 
 
-This creates a file ``~/.imgcmp/fingerprints.hdf`` (HDF5 file format). Last,
-cluster images by using a similarity index (``0.3`` below). A small index means
-to put only very similar images in one cluster. The extreme case 0.0 means to
-allow zero dissimilarity and thus put each image in a cluster of size 1. In
-contrast, large values imply less strict clustering and will put more but less
-similar images in a cluster. A value of 1.0 is equal to putting all images in
-one single cluster (e.g. all are treated as equal)::
+This uses all files in ``~/.imgcmp/convert/*`` by default. Alternatively,
+specify all images on the command line. It creates a file
+``~/.imgcmp/fingerprints.hdf`` (HDF5 file format, fingerprint database). 
+
+Last, we will cluster the images (actually their fingerprints) by using a
+similarity index ( ``0..1``, ``0.3`` below). The index can be thought of as the
+allowed *dissimilarity*. A small index means to put only very similar images in
+one cluster. The extreme case 0.0 means to allow zero dissimilarity and thus
+put each image in a cluster of size 1. In contrast, large values imply less
+strict clustering and will put more but less similar images in a cluster. A
+value of 1.0 is equal to putting all images in one single cluster (e.g. all
+images are treated as equal)::
 
     $ ./bin/20cluster.py 0.3
+    cluster dir: /home/user/.imgcmp/cluster
     items per cluster : number of such clusters
     2 : 41
     3 : 2
     4 : 2
 
-Have a look at the clusters (as dirs with symlinks to the relevant files)::
+By default, the database ``~/.imgcmp/fingerprints.hdf`` is used. Have a look at
+the clusters (as dirs with symlinks to the relevant files)::
 
     $ ls ~/.imgcmp/cluster/
     cluster_with_2  cluster_with_3  cluster_with_4
