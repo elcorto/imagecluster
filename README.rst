@@ -8,17 +8,15 @@ Usage
 
 There are 3 scripts in ``bin/``::
 
-    $ ls bin/
     00resize.py  10fingerprints.py  20cluster.py
 
 These must be executed one after another. Have a look at the help (use
 ``<script> -h``).
 
 The first one, resizing images, is optional. However, if you have large images
-(e.g. from your very expensive new camera), you should really resize them first
-in order to lower the computational cost of subsequent operations. This makes
-sense of you want (and you will want) to play with various parameters of the
-clustering.
+(several MB/image), you should really resize them first in order to lower the
+computational cost of subsequent operations. This makes sense if you want to
+play with various parameters of the clustering.
 
 ::
 
@@ -59,7 +57,7 @@ the clusters (as dirs with symlinks to the relevant files)::
     $ ls ~/.imgcmp/cluster/cluster_with_2/
     cluster_0   cluster_1  cluster_2
 
-    $ qiv -ifm ~/.imgcmp/cluster/cluster_with_2/cluster_0/*
+    $ qiv -ifm ~/.imgcmp/cluster/cluster_with_2/cluster_0/
 
 Methods
 =======
@@ -67,7 +65,7 @@ Methods
 What we can do and what not
 ---------------------------
 
-We use a variant of the phash method -- a simple and fast way to calculate
+We use a variant of the "phash" method -- a simple and fast way to calculate
 fingerprints. The package can detect images which are rather similar, e.g. the
 same scene photographed twice or more with some camera movement in between, or
 a scene with the same background and e.g. one person exchanged. Good parameter
@@ -93,13 +91,18 @@ foreground, but the information -- this is my kitchen -- is the same. This is a
 feature-detection task which relies on the ability to recognize *objects*
 within a scene, regardless of other scene parameters (like view angle, color,
 light, ...). It turns out that we need Neural Networks (you know: Tensor Flow
-etc) and some real machine learning for the generation of better feature
-vectors, e.g. a feature vector that always encodes the information "my
-kitchen". The simple image hashing done here is rather limited in that respect.
-It only does a very pedestrian smoothing / low-pass filtering to reduce the
-noise and extract the "important" parts of the image. But this helps to find
-duplicates and almost-duplicates in a collection of photos. And we learn how
-to do clustering with scipy!
+etc) and some real machine learning for the generation of better *feature
+vectors*, e.g. a feature vector that always encodes the information "my
+kitchen" -- similar to DNNs which learn features automatically. The simple
+image hashing done here is rather limited in that respect. It only does a very
+pedestrian smoothing / low-pass filtering to reduce the noise and extract the
+"important" parts of the image. But this helps to find duplicates and
+almost-duplicates in a collection of photos. And we learn how to do clustering
+with scipy!
+
+Note that we do not want to do the clustering with an NN, only the feature
+vector generation. The clustering shall be done in a classical fashion as used
+here (hierarchical/agglomerative clustering).
 
 
 image fingerprints: simple and fast

@@ -20,13 +20,15 @@
 # Each PIL.Image.<method> variable is actually an integer (e.g. Image.NEAREST
 # is 0).
 #
-# We tried the resample interpolation methods and measured the speed measured
-# (ipython's timeit) for resizing an image
-# 3840x2160 -> 8x8
+# We tried the resample interpolation methods and measured the speed (ipython's
+# timeit) for resizing an image 3840x2160 -> 8x8. We also compared the resample
+# quality as difference to the best possible resample result, which we defined
+# to be the LANCZOS method (from visual inspection abd b/c it is
+# computationally the most elaborate).
 #
 #                                      speed [ms]     
 # Image.NEAREST                   = 0  29.9e-3
-# Image.LANCZOS = Image.ANTIALIAS = 1  123
+# Image.LANCZOS = Image.ANTIALIAS = 1  123          # reference result
 # Image.BILINEAR                  = 2  47
 # Image.BICUBIC                   = 3  87
 #
