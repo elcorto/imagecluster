@@ -90,27 +90,35 @@ image of my kitchen, only from a different angle and some persons in the
 foreground, but the information -- this is my kitchen -- is the same. This is a
 feature-detection task which relies on the ability to recognize *objects*
 within a scene, regardless of other scene parameters (like view angle, color,
-light, ...). It turns out that we need Neural Networks (you know: Tensor Flow
-etc) and some real machine learning for the generation of better *feature
-vectors*, e.g. a feature vector that always encodes the information "my
-kitchen" -- similar to DNNs which learn features automatically. The simple
-image hashing done here is rather limited in that respect. It only does a very
-pedestrian smoothing / low-pass filtering to reduce the noise and extract the
-"important" parts of the image. But this helps to find duplicates and
-almost-duplicates in a collection of photos. And we learn how to do clustering
-with scipy!
+light, ...). It turns out that we may need Neural Networks and some real
+machine learning for the generation of better *feature vectors*, e.g. a feature
+vector that always encodes the information "my kitchen" -- similar to DNNs
+which learn features automatically. The simple image hashing done here is
+rather limited in that respect. It only does a very pedestrian smoothing /
+low-pass filtering to reduce the noise and extract the "important" parts of the
+image. But this helps to find duplicates and almost-duplicates in a collection
+of photos. 
 
 Note that we do not want to do the clustering with an NN, only the feature
 vector generation. The clustering shall be done in a classical fashion as used
 here (hierarchical/agglomerative clustering).
 
+NN-related keywords for doing it right:
+
+* distributed representation/embedding: the network has an abstract
+  representation of the object ("my kitchen"), distributed across the whole net
+  via the weights
+* unsupervised learning: learn that all images should produce the same net
+  output "my kitchen" w/o labeled training data -- i.e. find clusters
+  (structure in the data) automatically
+* neighorhood component analysis, wasabi, category learning
 
 image fingerprints: simple and fast
 -----------------------------------
 These methods basically squash down the image to something like 16x16,
 transform to gray scale and store that as a feature vector of length 16x16, for
-example -> fast. But the method is not invariant against rotation, only scaling
-along x and/or y. 
+example -> fast. But the method is not invariant against rotation and the
+like.
 
 The idea is always to calculate a database of image fingerprints ("hashes",
 feature vectors) and then do searches in feature space (all fingerprints) using

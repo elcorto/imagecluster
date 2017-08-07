@@ -23,7 +23,7 @@
 # We tried the resample interpolation methods and measured the speed (ipython's
 # timeit) for resizing an image 3840x2160 -> 8x8. We also compared the resample
 # quality as difference to the best possible resample result, which we defined
-# to be the LANCZOS method (from visual inspection abd b/c it is
+# to be the LANCZOS method (from visual inspection and b/c it is
 # computationally the most elaborate).
 #
 #                                      speed [ms]     
@@ -51,9 +51,8 @@ FLOAT = np.float64
 
 
 def img2arr(img, size=(8,8), dtype=INT, resample=2):
-    """
-    Convert PIL Image to gray scale and resample to numpy array of shape
-    ``(size,size)`` and `dtype`.
+    """Convert PIL Image to gray scale and resample to numpy array of shape
+    `size` and `dtype`.
 
     Parameters
     ----------
@@ -99,7 +98,9 @@ def dhash(img, size=(8,8)):
 
 
 def cluster(files, fps, sim=0.2, metric='hamming'):
-    """
+    """Hierarchical clustering of images `files` based on image fingerprints
+    `fps`.
+
     files : list of file names
     sim : float
         similarity (1=max. allowed similarity, all images are considered

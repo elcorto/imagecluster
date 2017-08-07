@@ -69,6 +69,7 @@ def _worker(tup, fraction=None, tgtdir=None, nfiles=None, verbose=False):
     src = os.path.abspath(_src)
     # /home/foo -> _home_foo -> home_foo
     tgt = os.path.join(tgtdir, src.replace('/','_')[1:])
+    # -auto-orient: keep EXIF orientation information
     cmd = "convert -limit thread 1 -sample {}% -auto-orient {} {}".format(
             fraction*100, src, tgt)
     if verbose >= 1:   
