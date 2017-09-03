@@ -3,6 +3,14 @@ About
 Package for comparing images by content. Uses simple image hashing
 ("fingerprints"). See "Methods" below for details.
 
+Install
+=======
+
+::
+
+    git clone ...
+    pip3 install -e .
+
 Usage
 =====
 

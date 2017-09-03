@@ -1,0 +1,14 @@
+README.rst
+bin/00resize.py
+bin/10fingerprints.py
+bin/20cluster.py
+imgcmp/__init__.py
+imgcmp/calc.py
+imgcmp/cli.py
+imgcmp/env.py
+imgcmp/io.py
+imgcmp/misc.py
+imgcmp.egg-info/PKG-INFO
+imgcmp.egg-info/SOURCES.txt
+imgcmp.egg-info/dependency_links.txt
+imgcmp.egg-info/top_level.txt
