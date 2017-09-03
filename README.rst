@@ -1,162 +1,148 @@
 About
 =====
-Package for comparing images by content. Uses simple image hashing
-("fingerprints"). See "Methods" below for details.
+
+Package for comparing and clustering images by content. We use a pre-trained
+deep convolutional neural network for calculating image fingerprints, which are
+then used to cluster similar images.
 
 Install
 =======
 
 ::
 
-    git clone ...
-    pip3 install -e .
+    $ git clone https://github.com/elcorto/imagecluster.git
+    $ pip3 install -e .
+
+or::
+
+    $ python3 setup build --prefix=...
 
 Usage
 =====
 
-There are 3 scripts in ``bin/``::
+See ``imagecluster.main.main()`` for a usage example.
 
-    00resize.py  10fingerprints.py  20cluster.py
+If there is no fingerprints database, it will first run all images through the
+NN model and calculate fingerprints. Then it will cluster the images based on
+the fingerprints and a similarity index (more details below).
 
-These must be executed one after another. Have a look at the help (use
-``<script> -h``).
+Example session::
 
-The first one, resizing images, is optional. However, if you have large images
-(several MB/image), you should really resize them first in order to lower the
-computational cost of subsequent operations. This makes sense if you want to
-play with various parameters of the clustering.
+	>>> from imagecluster import main
+	>>> main.main('/path/to/testpics/', sim=0.5)
+	no fingerprints database /path/to/testpics/fingerprints.pk found
+	running all images thru NN model ...
+	/path/to/testpics/DSC_1061.JPG
+	/path/to/testpics/DSC_1080.JPG
+	...
+	/path/to/testpics/DSC_1087.JPG
+	clustering ...
+	cluster dir: /path/to/testpics/clusters
+	items per cluster : number of such clusters
+	2 : 7
+	3 : 2
+	4 : 4
+	5 : 1
+	10 : 1
 
-::
+Have a look at the clusters (as dirs with symlinks to the relevant files)::
 
-    $ ./bin/00resize.py 0.2 /path/to/large/pics/* -vv
-
-This will resize all images to 20% (factor 0.2) of their original size. Resized
-files are written to ``~/.imgcmp/convert/`` by default. Now, calculate the
-fingerprint database::
-
-    $ ./bin/10fingerprints.py 
-
-This uses all files in ``~/.imgcmp/convert/*`` by default. Alternatively,
-specify all images on the command line. It creates a file
-``~/.imgcmp/fingerprints.hdf`` (HDF5 file format, fingerprint database). 
-
-Last, we will cluster the images (actually their fingerprints) by using a
-similarity index ( ``0..1``, ``0.3`` below). The index can be thought of as the
-allowed *dissimilarity*. A small index means to put only very similar images in
-one cluster. The extreme case 0.0 means to allow zero dissimilarity and thus
-put each image in a cluster of size 1. In contrast, large values imply less
-strict clustering and will put more but less similar images in a cluster. A
-value of 1.0 is equal to putting all images in one single cluster (e.g. all
-images are treated as equal)::
-
-    $ ./bin/20cluster.py 0.3
-    cluster dir: /home/user/.imgcmp/cluster
-    items per cluster : number of such clusters
-    2 : 41
-    3 : 2
-    4 : 2
-
-By default, the database ``~/.imgcmp/fingerprints.hdf`` is used. Have a look at
-the clusters (as dirs with symlinks to the relevant files)::
-
-    $ ls ~/.imgcmp/cluster/
-    cluster_with_2  cluster_with_3  cluster_with_4
-
-    $ ls ~/.imgcmp/cluster/cluster_with_2/
-    cluster_0   cluster_1  cluster_2
-
-    $ qiv -ifm ~/.imgcmp/cluster/cluster_with_2/cluster_0/
+	$ tree /path/to/testpics
+	/path/to/testpics/clusters
+	├── cluster_with_10
+	│   └── cluster_0
+	│       ├── DSC_1068.JPG -> /path/to/testpics/DSC_1068.JPG
+	│       ├── DSC_1070.JPG -> /path/to/testpics/DSC_1070.JPG
+	│       ├── DSC_1071.JPG -> /path/to/testpics/DSC_1071.JPG
+	│       ├── DSC_1072.JPG -> /path/to/testpics/DSC_1072.JPG
+	│       ├── DSC_1073.JPG -> /path/to/testpics/DSC_1073.JPG
+	│       ├── DSC_1074.JPG -> /path/to/testpics/DSC_1074.JPG
+	│       ├── DSC_1075.JPG -> /path/to/testpics/DSC_1075.JPG
+	│       ├── DSC_1076.JPG -> /path/to/testpics/DSC_1076.JPG
+	│       ├── DSC_1077.JPG -> /path/to/testpics/DSC_1077.JPG
+	│       └── DSC_1078.JPG -> /path/to/testpics/DSC_1078.JPG
+	├── cluster_with_2
+	│   ├── cluster_0
+	│   │   ├── DSC_1037.JPG -> /path/to/testpics/DSC_1037.JPG
+	│   │   └── DSC_1038.JPG -> /path/to/testpics/DSC_1038.JPG
+	│   ├── cluster_1
+	│   │   ├── DSC_1053.JPG -> /path/to/testpics/DSC_1053.JPG
+	│   │   └── DSC_1054.JPG -> /path/to/testpics/DSC_1054.JPG
+	│   ├── cluster_2
+	│   │   ├── DSC_1046.JPG -> /path/to/testpics/DSC_1046.JPG
+	│   │   └── DSC_1047.JPG -> /path/to/testpics/DSC_1047.JPG
+	...
 
 Methods
 =======
 
-What we can do and what not
----------------------------
-
-We use a variant of the "phash" method -- a simple and fast way to calculate
-fingerprints. The package can detect images which are rather similar, e.g. the
-same scene photographed twice or more with some camera movement in between, or
-a scene with the same background and e.g. one person exchanged. Good parameter
-values are x=8 ... 16 (``10fingerprints.py -x``) and similarity index sim=0.1
-... 0.3 (``20cluster.py <sim>``). However, values above sim=0.3 will quickly
-recognize all sorts of images as equal and usually, results obtained with sim >
-0.5 are seldom useful. Next, the higher x, the more detailed and close to the
-original image the fingerprint is, since the original is squashed down to a x
-times x grayscale image, converted to binary (pixed is black or white), and
-flattened into a vector of x**2 length (the "fingerprint"). High values such as
-64 already result in detection of only extremely similar images, since too much
-information of the original image is kept. Instead, a value of x=2 is obviously
-useless because it reduces each image to a 2x2 matrix (and fingerprint vector of
-length 4) with almost no information from the original image left. So x=8 and
-sim=0.1 is roughly equivalent to x=16 and sim=0.3. Therefore, if you get too
-many "false positives" (images counted as similar when they are not), reduce
-sim or increase x.
+Image fingerprints
+------------------
 
 The original goal was to have a clustering based on classification of image
 *content* -- smth like: image A this an image of my kitchen; image B is also an
 image of my kitchen, only from a different angle and some persons in the
 foreground, but the information -- this is my kitchen -- is the same. This is a
-feature-detection task which relies on the ability to recognize *objects*
-within a scene, regardless of other scene parameters (like view angle, color,
-light, ...). It turns out that we may need Neural Networks and some real
-machine learning for the generation of better *feature vectors*, e.g. a feature
-vector that always encodes the information "my kitchen" -- similar to DNNs
-which learn features automatically. The simple image hashing done here is
-rather limited in that respect. It only does a very pedestrian smoothing /
-low-pass filtering to reduce the noise and extract the "important" parts of the
-image. But this helps to find duplicates and almost-duplicates in a collection
-of photos. 
+feature-detection task which relies on the ability to recognize then content of
+the scene, regardless of other scene parameters (like view angle, color, light,
+...). It turns out that we can use deep convolutional neural networks
+(convnets) for the generation of good *feature vectors*, e.g. a feature vector
+that always encodes the information "my kitchen", since deep nets, once trained
+on many different images, have developed an internal representation of objects
+like chair, boat, car .. and kitchen. Simple image hashing, which we used
+previously, is rather limited in that respect. It only does a very pedestrian
+smoothing / low-pass filtering to reduce the noise and extract the "important"
+parts of the image. This helps to find duplicates and almost-duplicates in a
+collection of photos. 
 
-Note that we do not want to do the clustering with an NN, only the feature
-vector generation. The clustering shall be done in a classical fashion as used
-here (hierarchical/agglomerative clustering).
+To this end, we use a pre-trained NN (VGG16_ as implemented by Keras_). The
+network was trained on ImageNet_ and is able to categorize images in to 1000
+classes (the last layer has 1000 nodes). We chop off the last layer (`thanks
+for the hint! <alexcnwy_>`_) and use the activations of the pre-last fully
+connected layer (4096 nodes) as image fingerprints (numpy 1d array of shape
+``(4096,)``).
 
-NN-related keywords for doing it right:
+The package can detect images which are rather similar, e.g. the same scene
+photographed twice or more with some camera movement in between, or a scene
+with the same background and e.g. one person exchanged. This was also possible
+with image hashes. 
 
-* distributed representation/embedding: the network has an abstract
-  representation of the object ("my kitchen"), distributed across the whole net
-  via the weights
-* unsupervised learning: learn that all images should produce the same net
-  output "my kitchen" w/o labeled training data -- i.e. find clusters
-  (structure in the data) automatically
-* neighorhood component analysis, wasabi, category learning
+Now with NN-based fingerprints, we also cluster all sorts of images which have,
+e.g. mountains, tents, or beaches, so this is far better. However, if you run
+this on a large collection of images which contain images with tents or
+beaches, then the system won't recognize that certain images belong together
+because they were taken on the same trip. All tent images will be in one
+cluster, and so will all beaches images. This is probably b/c in this case, the
+classification of the image happens by looking at the background. A tent in the
+center of the image will always look the same, but it is the background which
+makes humans distinguish the context. The problem is: VGG16 and all the other
+popular networks have been trained on ridiculously small images of 224x224 size
+because of computational limitations, where it is impossible to recognize
+background details.
 
-image fingerprints: simple and fast
------------------------------------
-These methods basically squash down the image to something like 16x16,
-transform to gray scale and store that as a feature vector of length 16x16, for
-example -> fast. But the method is not invariant against rotation and the
-like.
+Clustering
+----------
 
-The idea is always to calculate a database of image fingerprints ("hashes",
-feature vectors) and then do searches in feature space (all fingerprints) using
-some form of KD-tree / nearest neighbor search.
+We use hierarchical clustering. This is basic stuff straight from scipy. See
+``imagecluster.calc.cluster()``. The image fingerprints (4096-dim vectors) are
+compared using a distance metric and similar images are put together in a
+cluster. The threshold for what counts as similar is defined by a similar index
+(again, see ``calc.cluster()``).
 
-* google: calculate image fingerprint
-* [a|p|d]hash:
-  https://realpython.com/blog/python/fingerprinting-images-for-near-duplicate-detection/ 
-* especially: phash.org
-* older Perl implementation of a ahash(?)-like method:
-  http://www.jhnc.org/findimagedupes/manpage.html, also as Debian package
+The index can be thought of as the allowed *dissimilarity* or a similarity
+tolerance. A small index means to put only very similar images in one cluster.
+The extreme case 0.0 means to allow zero dissimilarity and thus to put each image
+in a cluster of size 1. In contrast, large values imply less strict clustering
+and will put more but less similar images in a cluster. A value of 1.0 is equal
+to putting all images in one single cluster (all images are treated as
+equal).
 
-more scientific "feature extraction"
-------------------------------------
+Tests
+=====
 
-* classical CV (computer vision): SIFT (good but slow, old-school
-  hand-engineered feature detector), SURF (faster version of
-  SIFT)
-* http://opencv-python-tutroals.readthedocs.org/en/latest/index.html
-    * SIFT and SURF are patented, so use ORB instead
-      http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html#orb
-* opencv Bag Of Words: http://stackoverflow.com/questions/7205489/opencv-fingerprint-image-and-compare-against-database
+Run ``nosetests3`` (nosetests for Python3, Linux).
 
-Python image processing
------------------------
-* google: python image processing :)
-* http://scikit-image.org/
-* PIL vs. Pillow: http://docs.python-guide.org/en/latest/scenarios/imaging/
-* http://www.scipy-lectures.org/advanced/image_processing
-
-better methods
---------------
-read about: Content-based image classification
+.. _VGG16: https://arxiv.org/abs/1409.1556
+.. _Keras: https://keras.io
+.. _ImageNet: http://www.image-net.org/
+.. _alexcnwy: https://github.com/alexcnwy

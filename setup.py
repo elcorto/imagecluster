@@ -1,7 +1,7 @@
 # publish on pypi
 # ---------------
 #   $ python3 setup.py sdist
-#   $ twine upload dist/imgcmp-x.y.z.tar.gz 
+#   $ twine upload dist/imagecluster-x.y.z.tar.gz 
 
 import os, importlib
 from setuptools import setup
@@ -21,12 +21,12 @@ with open(os.path.join(here, 'README.rst')) as fd:
 # I don't get it, seriously.
 install_requires = []
 req = [('numpy', 'numpy', None, None),
-       ('docopt', 'docopt', None, None),
        ('tensorflow', 'tensorflow', None, None),
        ('keras', 'keras', None, None),
        ]
 
 for pipname,pkgname,op,ver in req:
+    print("checking dependency: {}".format(pkgname))
     if op and ver:
         this_req = pipname + op + ver
     else:
@@ -42,16 +42,17 @@ for pipname,pkgname,op,ver in req:
         install_requires.append(this_req)
 
 setup(
-    name='imgcmp',
+    name='imagecluster',
     version='0.0.0',
-    description='Cluster images.',
+    description='cluster images based on image content using a pre-trained ' \
+'deep neural network and hierarchical clustering',
     long_description=long_description,
-    url='https://github.com/elcorto/imgcmp',
+    url='https://github.com/elcorto/imagecluster',
     author='Steve Schmerler',
     author_email='git@elcorto.com',
     license='GPLv3',
-    keywords='image cluster',
-    packages=['imgcmp'],
+    keywords='image cluster vgg16 deep-learning',
+    packages=['imagecluster'],
     install_requires=install_requires,
-    scripts=['{}/{}'.format(bindir, script) for script in os.listdir(bindir)]
+##    scripts=['{}/{}'.format(bindir, script) for script in os.listdir(bindir)]
 )
