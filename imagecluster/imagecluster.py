@@ -162,12 +162,13 @@ def make_links(clusters, cluster_dr):
     #  number_of_files2: [[list_of_files],...],
     # }
     cdct_multi = {}
-    for x in (x for x in clusters.values() if len(x) > 1):
+    for x in clusters.values():
         nn = len(x)
-        if not (nn in cdct_multi.keys()):
-            cdct_multi[nn] = [x]
-        else:
-            cdct_multi[nn].append(x)
+        if nn > 1:
+            if not (nn in cdct_multi.keys()):
+                cdct_multi[nn] = [x]
+            else:
+                cdct_multi[nn].append(x)
 
     print("cluster dir: {}".format(cluster_dr))
     print("items per cluster : number of such clusters")
