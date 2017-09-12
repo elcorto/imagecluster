@@ -20,6 +20,9 @@ or::
 Usage
 =====
 
+We use a pre-trained keras NN model. The weights will be downloaded *once* by
+keras automatically upon first import and placed into ``~/.keras/models/``.
+
 See ``imagecluster.main.main()`` for a usage example.
 
 If there is no fingerprints database, it will first run all images through the
@@ -28,50 +31,53 @@ the fingerprints and a similarity index (more details below).
 
 Example session::
 
-	>>> from imagecluster import main
-	>>> main.main('/path/to/testpics/', sim=0.5)
-	no fingerprints database /path/to/testpics/fingerprints.pk found
-	running all images thru NN model ...
-	/path/to/testpics/DSC_1061.JPG
-	/path/to/testpics/DSC_1080.JPG
-	...
-	/path/to/testpics/DSC_1087.JPG
-	clustering ...
-	cluster dir: /path/to/testpics/clusters
-	items per cluster : number of such clusters
-	2 : 7
-	3 : 2
-	4 : 4
-	5 : 1
-	10 : 1
+    >>> from imagecluster import main
+    >>> main.main('/path/to/testpics/', sim=0.5)
+    no fingerprints database /path/to/testpics/fingerprints.pk found
+    running all images through NN model ...
+    /path/to/testpics/DSC_1061.JPG
+    /path/to/testpics/DSC_1080.JPG
+    ...
+    /path/to/testpics/DSC_1087.JPG
+    clustering ...
+    cluster dir: /path/to/testpics/clusters
+    items per cluster : number of such clusters
+    2 : 7
+    3 : 2
+    4 : 4
+    5 : 1
+    10 : 1
 
 Have a look at the clusters (as dirs with symlinks to the relevant files)::
 
-	$ tree /path/to/testpics
-	/path/to/testpics/clusters
-	├── cluster_with_10
-	│   └── cluster_0
-	│       ├── DSC_1068.JPG -> /path/to/testpics/DSC_1068.JPG
-	│       ├── DSC_1070.JPG -> /path/to/testpics/DSC_1070.JPG
-	│       ├── DSC_1071.JPG -> /path/to/testpics/DSC_1071.JPG
-	│       ├── DSC_1072.JPG -> /path/to/testpics/DSC_1072.JPG
-	│       ├── DSC_1073.JPG -> /path/to/testpics/DSC_1073.JPG
-	│       ├── DSC_1074.JPG -> /path/to/testpics/DSC_1074.JPG
-	│       ├── DSC_1075.JPG -> /path/to/testpics/DSC_1075.JPG
-	│       ├── DSC_1076.JPG -> /path/to/testpics/DSC_1076.JPG
-	│       ├── DSC_1077.JPG -> /path/to/testpics/DSC_1077.JPG
-	│       └── DSC_1078.JPG -> /path/to/testpics/DSC_1078.JPG
-	├── cluster_with_2
-	│   ├── cluster_0
-	│   │   ├── DSC_1037.JPG -> /path/to/testpics/DSC_1037.JPG
-	│   │   └── DSC_1038.JPG -> /path/to/testpics/DSC_1038.JPG
-	│   ├── cluster_1
-	│   │   ├── DSC_1053.JPG -> /path/to/testpics/DSC_1053.JPG
-	│   │   └── DSC_1054.JPG -> /path/to/testpics/DSC_1054.JPG
-	│   ├── cluster_2
-	│   │   ├── DSC_1046.JPG -> /path/to/testpics/DSC_1046.JPG
-	│   │   └── DSC_1047.JPG -> /path/to/testpics/DSC_1047.JPG
-	...
+    $ tree /path/to/testpics
+    /path/to/testpics/clusters
+    ├── cluster_with_10
+    │   └── cluster_0
+    │       ├── DSC_1068.JPG -> /path/to/testpics/DSC_1068.JPG
+    │       ├── DSC_1070.JPG -> /path/to/testpics/DSC_1070.JPG
+    │       ├── DSC_1071.JPG -> /path/to/testpics/DSC_1071.JPG
+    │       ├── DSC_1072.JPG -> /path/to/testpics/DSC_1072.JPG
+    │       ├── DSC_1073.JPG -> /path/to/testpics/DSC_1073.JPG
+    │       ├── DSC_1074.JPG -> /path/to/testpics/DSC_1074.JPG
+    │       ├── DSC_1075.JPG -> /path/to/testpics/DSC_1075.JPG
+    │       ├── DSC_1076.JPG -> /path/to/testpics/DSC_1076.JPG
+    │       ├── DSC_1077.JPG -> /path/to/testpics/DSC_1077.JPG
+    │       └── DSC_1078.JPG -> /path/to/testpics/DSC_1078.JPG
+    ├── cluster_with_2
+    │   ├── cluster_0
+    │   │   ├── DSC_1037.JPG -> /path/to/testpics/DSC_1037.JPG
+    │   │   └── DSC_1038.JPG -> /path/to/testpics/DSC_1038.JPG
+    │   ├── cluster_1
+    │   │   ├── DSC_1053.JPG -> /path/to/testpics/DSC_1053.JPG
+    │   │   └── DSC_1054.JPG -> /path/to/testpics/DSC_1054.JPG
+    │   ├── cluster_2
+    │   │   ├── DSC_1046.JPG -> /path/to/testpics/DSC_1046.JPG
+    │   │   └── DSC_1047.JPG -> /path/to/testpics/DSC_1047.JPG
+    ...
+
+If you run this again on the same directory, only the clustering will be
+repeated.
 
 Methods
 =======
@@ -111,14 +117,14 @@ Now with NN-based fingerprints, we also cluster all sorts of images which have,
 e.g. mountains, tents, or beaches, so this is far better. However, if you run
 this on a large collection of images which contain images with tents or
 beaches, then the system won't recognize that certain images belong together
-because they were taken on the same trip. All tent images will be in one
-cluster, and so will all beaches images. This is probably b/c in this case, the
-classification of the image happens by looking at the background. A tent in the
-center of the image will always look the same, but it is the background which
-makes humans distinguish the context. The problem is: VGG16 and all the other
-popular networks have been trained on ridiculously small images of 224x224 size
-because of computational limitations, where it is impossible to recognize
-background details.
+because they were taken on the same trip, for instance. All tent images will be
+in one cluster, and so will all beaches images. This is probably b/c in this
+case, the human classification of the image happens by looking at the
+background. A tent in the center of the image will always look the same, but it
+is the background which makes humans distinguish the context. The problem is:
+VGG16 and all the other popular networks have been trained on ridiculously
+small images of 224x224 size because of computational limitations, where it is
+impossible to recognize background details.
 
 Clustering
 ----------
