@@ -86,10 +86,10 @@ Image fingerprints
 ------------------
 
 The original goal was to have a clustering based on classification of image
-*content* -- smth like: image A this an image of my kitchen; image B is also an
+*content* such as: image A this an image of my kitchen; image B is also an
 image of my kitchen, only from a different angle and some persons in the
 foreground, but the information -- this is my kitchen -- is the same. This is a
-feature-detection task which relies on the ability to recognize then content of
+feature-detection task which relies on the ability to recognize the content of
 the scene, regardless of other scene parameters (like view angle, color, light,
 ...). It turns out that we can use deep convolutional neural networks
 (convnets) for the generation of good *feature vectors*, e.g. a feature vector
@@ -102,9 +102,9 @@ parts of the image. This helps to find duplicates and almost-duplicates in a
 collection of photos. 
 
 To this end, we use a pre-trained NN (VGG16_ as implemented by Keras_). The
-network was trained on ImageNet_ and is able to categorize images in to 1000
+network was trained on ImageNet_ and is able to categorize images into 1000
 classes (the last layer has 1000 nodes). We chop off the last layer (`thanks
-for the hint! <alexcnwy_>`_) and use the activations of the pre-last fully
+for the hint! <alexcnwy_>`_) and use the activations of the second to last fully
 connected layer (4096 nodes) as image fingerprints (numpy 1d array of shape
 ``(4096,)``).
 
@@ -119,7 +119,7 @@ this on a large collection of images which contain images with tents or
 beaches, then the system won't recognize that certain images belong together
 because they were taken on the same trip, for instance. All tent images will be
 in one cluster, and so will all beaches images. This is probably b/c in this
-case, the human classification of the image happens by looking at the
+case, the human classification of the image works by looking at the
 background. A tent in the center of the image will always look the same, but it
 is the background which makes humans distinguish the context. The problem is:
 VGG16 and all the other popular networks have been trained on ridiculously
@@ -129,11 +129,10 @@ impossible to recognize background details.
 Clustering
 ----------
 
-We use hierarchical clustering. This is basic stuff straight from scipy. See
-``imagecluster.calc.cluster()``. The image fingerprints (4096-dim vectors) are
-compared using a distance metric and similar images are put together in a
-cluster. The threshold for what counts as similar is defined by a similar index
-(again, see ``calc.cluster()``).
+We use hierarchical clustering, see ``imagecluster.calc.cluster()``. The image
+fingerprints (4096-dim vectors) are compared using a distance metric and
+similar images are put together in a cluster. The threshold for what counts as
+similar is defined by a similar index (again, see ``calc.cluster()``).
 
 The index can be thought of as the allowed *dissimilarity* or a similarity
 tolerance. A small index means to put only very similar images in one cluster.

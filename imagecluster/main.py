@@ -20,13 +20,10 @@ def main(imagedir, sim=0.5):
         files = ic.get_files(imagedir)
         model = ic.get_model()
         print("running all images through NN model ...".format(dbfn))
-        fingerprints = ic.fingerprints(files, model, size=(224,224))
-        ic.write_pk(fingerprints, dbfn)
+        fps = ic.fingerprints(files, model, size=(224,224))
+        ic.write_pk(fps, dbfn)
     else:
         print("loading fingerprints database {} ...".format(dbfn))
-        fingerprints = ic.read_pk(dbfn)
+        fps = ic.read_pk(dbfn)
     print("clustering ...")
-    clusters = ic.cluster(list(fingerprints.keys()), 
-                          np.array(list(fingerprints.values())), 
-                          sim)
-    ic.make_links(clusters, pj(imagedir, 'clusters'))
+    ic.make_links(ic.cluster(fps, sim), pj(imagedir, 'clusters'))

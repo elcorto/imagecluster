@@ -56,7 +56,7 @@ def fingerprint(fn, model, size):
     # to small inputs of 244x244 by the VGG network, we should do our best to
     # keep as much information from the original image as possible. This is a
     # gut feeling, untested. But given that model.predict() is 10x slower than
-    # the while PIL image loading and resizing .. who cares.
+    # PIL image loading and resizing .. who cares.
     #
     # (244, 244, 3)
     ##img = image.load_img(fn, target_size=size)
@@ -115,20 +115,17 @@ def get_files(dr):
     return [pj(dr,base) for base in os.listdir(dr)] 
 
 
-def cluster(files, fps, sim=0.5, method='average', metric='euclidean'):
-    """Hierarchical clustering of images `files` based on image fingerprints
-    `fps`.
+def cluster(fps, sim=0.5, method='average', metric='euclidean'):
+    """Hierarchical clustering of images based on image fingerprints.
     
     Parameters
     ----------
-    files : list of file names
+    fps: dict
+        output of :func:`fingerprints`
     sim : float 0..1
         similarity tolerance (1=max. allowed similarity tolerance, all images
         are considered similar and are in one cluster, 0=zero similarity
         allowed, each image is it's own cluster of size 1)
-    fps : 2d array (len(files), N)
-        flattened fingerprints (1d array for each image), where `size` is the
-        argument to one of the *hash() functions 
     method : see scipy.hierarchy.linkage(), all except 'centroid' produce
         pretty much the same result
     metric : see scipy.hierarchy.linkage(), make sure to use 'euclidean' in
@@ -136,24 +133,30 @@ def cluster(files, fps, sim=0.5, method='average', metric='euclidean'):
     
     Returns
     -------
-    clusters : dict
+    clusters : nested list
         key = number of the cluster, value = list of filenames in the cluster
-        {1: [filename1, filename5],
-         2: [filename23],
-         3: [filename48, filename2, filename42, ...],
+        [[filename1, filename5],                    # cluster 1
+         [filename23],                              # cluster 2
+         [filename48, filename2, filename42, ...],  # cluster 3
          ...
-         }
+         ]
     """
-    dfps = distance.pdist(fps, metric)
+    # array(list(...)): 2d array
+    #   [[... fingerprint of image1 (4096,) ...],
+    #    [... fingerprint of image2 (4096,) ...],
+    #    ...
+    #    ]
+    dfps = distance.pdist(np.array(list(fps.values())), metric)
+    files = list(fps.keys())
     # hierarchical/agglomerative clustering (Z = linkage matrix, construct
     # dendrogram) 
     Z = hierarchy.linkage(dfps, method=method, metric=metric)
     # cut dendrogram, extract clusters
     cut = hierarchy.fcluster(Z, t=dfps.max()*sim, criterion='distance')
-    clusters = dict((ii,[]) for ii in np.unique(cut))
+    cluster_dct = dict((ii,[]) for ii in np.unique(cut))
     for iimg,iclus in enumerate(cut):
-        clusters[iclus].append(files[iimg])
-    return clusters 
+        cluster_dct[iclus].append(files[iimg])
+    return list(cluster_dct.values())
 
 
 def make_links(clusters, cluster_dr):
@@ -162,7 +165,7 @@ def make_links(clusters, cluster_dr):
     #  number_of_files2: [[list_of_files],...],
     # }
     cdct_multi = {}
-    for x in clusters.values():
+    for x in clusters:
         nn = len(x)
         if nn > 1:
             if not (nn in cdct_multi.keys()):
