@@ -111,10 +111,6 @@ def fingerprints(files, model, size=(224,224)):
     return dict((fn, fingerprint(fn, model, size)) for fn in files)
 
 
-def get_files(dr):
-    return [pj(dr,base) for base in os.listdir(dr)] 
-
-
 def cluster(fps, sim=0.5, method='average', metric='euclidean'):
     """Hierarchical clustering of images based on image fingerprints.
     
