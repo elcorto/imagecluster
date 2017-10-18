@@ -1,3 +1,5 @@
+"""Only tests where we need to import tensorflow, which takes long."""
+
 import numpy as np
 import scipy.ndimage as ni
 from scipy import misc
@@ -8,6 +10,7 @@ import logging
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 from imagecluster import main
+from imagecluster import imagecluster as ic
 pj = os.path.join
 
 
@@ -19,7 +22,9 @@ def test():
         arr = misc.face()
         images = [arr, 
                   ni.gaussian_filter(arr, 10), 
-                  ni.gaussian_filter(arr, 20)]
+                  ni.gaussian_filter(arr, 20),
+                  arr[...,0], # fake gray-scale image
+                  ]
         image_fns = []
         for idx, arr in enumerate(images):
             fn = pj(imagedir, 'image_{}.png'.format(idx))
@@ -31,7 +36,7 @@ def test():
         main.main(imagedir)
         with open(dbfn, 'rb') as fd:
             fps = pickle.load(fd)
-        assert len(fps.keys()) == 3
+        assert len(fps.keys()) == 4
         assert set(fps.keys()) == set(image_fns)
         for kk,vv in fps.items():
             assert isinstance(vv, np.ndarray)
