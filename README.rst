@@ -11,11 +11,12 @@ Install
 ::
 
     $ git clone https://github.com/elcorto/imagecluster.git
+    $ cd imagecluster
     $ pip3 install -e .
 
 or::
 
-    $ python3 setup build --prefix=...
+    $ python3 setup develop --prefix=...
 
 Usage
 =====
@@ -119,12 +120,18 @@ this on a large collection of images which contain images with tents or
 beaches, then the system won't recognize that certain images belong together
 because they were taken on the same trip, for instance. All tent images will be
 in one cluster, and so will all beaches images. This is probably b/c in this
-case, the human classification of the image works by looking at the
-background. A tent in the center of the image will always look the same, but it
-is the background which makes humans distinguish the context. The problem is:
+case, the human classification of the image works by looking at the background
+as well. A tent in the center of the image will always look the same, but it is
+the background which makes humans distinguish the context. The problem is:
 VGG16 and all the other popular networks have been trained on ridiculously
 small images of 224x224 size because of computational limitations, where it is
-impossible to recognize background details.
+impossible to recognize background details. Another point is that the
+background image triggers the activation of meta-information associated with
+that background in the human -- data which wasn't used when training ImageNet,
+of course. Thus, one way to improve things would be to re-train the network
+using this information. But then one would have labeled all images by hand
+again.
+
 
 Clustering
 ----------
