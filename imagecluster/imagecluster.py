@@ -90,7 +90,7 @@ def fingerprint(fn, model, size):
     return model.predict(arr4d_pp)[0,:]
 
 
-# Cannot use multiprocessing:
+# Cannot use multiprocessing (only tensorflow backend tested):
 # TypeError: can't pickle _thread.lock objects
 # The error doesn't come from functools.partial since those objects are
 # pickable since python3. The reason is the keras.model.Model, which is not
@@ -191,12 +191,12 @@ def make_links(clusters, cluster_dr):
     print("items per cluster : number of such clusters")
     if os.path.exists(cluster_dr):
         shutil.rmtree(cluster_dr)
-    for n_in_cluster in np.sort(list(cdct_multi.keys())):
-        cluster_list = cdct_multi[n_in_cluster]
-        print("{} : {}".format(n_in_cluster, len(cluster_list)))
+    for nn in np.sort(list(cdct_multi.keys())):
+        cluster_list = cdct_multi[nn]
+        print("{} : {}".format(nn, len(cluster_list)))
         for iclus, lst in enumerate(cluster_list):
             dr = pj(cluster_dr,
-                    'cluster_with_{}'.format(n_in_cluster),
+                    'cluster_with_{}'.format(nn),
                     'cluster_{}'.format(iclus))
             for fn in lst:
                 link = pj(dr, os.path.basename(fn))

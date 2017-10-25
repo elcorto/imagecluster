@@ -1,15 +1,6 @@
 import numpy as np
 import re, pickle, os
 
-##from matplotlib import pyplot as plt
-##
-##
-##def view_image_list(files):
-##    for filename in files:
-##        fig,ax = plt.subplots()
-##        ax.imshow(plt.imread(filename))
-##    plt.show()
-
 
 def read_pk(fn):
     with open(fn, 'rb') as fd:
