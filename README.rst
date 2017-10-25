@@ -141,13 +141,15 @@ fingerprints (4096-dim vectors) are compared using a distance metric and
 similar images are put together in a cluster. The threshold for what counts as
 similar is defined by a similar index (again, see ``calc.cluster()``).
 
-The index can be thought of as the allowed *dissimilarity* or a similarity
-tolerance. A small index means to put only very similar images in one cluster.
-The extreme case 0.0 means to allow zero dissimilarity and thus to put each image
-in a cluster of size 1. In contrast, large values imply less strict clustering
-and will put more but less similar images in a cluster. A value of 1.0 is equal
-to putting all images in one single cluster (all images are treated as
-equal).
+The index (0...1) defines the minimum required similarity that images must have
+in order to be clustered together. A high index means to put only very similar
+images in one cluster. The extreme case of similarity index 1 means to require
+100% similarity and thus to put each image in a cluster of size 1 (unless there
+are completely equal images). In contrast, low values imply low required
+similarity. This results in less strict clustering which will put more but less
+similar images in a cluster. A value of 0 (zero required similarity) is equal
+to putting all images in one single cluster since all images are treated as
+equal.
 
 Tests
 =====

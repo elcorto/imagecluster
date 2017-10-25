@@ -122,7 +122,7 @@ def fingerprints(files, model, size=(224,224)):
 
     Returns
     -------
-    fingerprint : dict
+    fingerprints : dict
         {filename1: array([...]),
          filename2: array([...]),
          ...
@@ -139,9 +139,7 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean'):
     fps: dict
         output of :func:`fingerprints`
     sim : float 0..1
-        similarity tolerance (1=max. allowed similarity tolerance, all images
-        are considered similar and are in one cluster, 0=zero similarity
-        allowed, each image is it's own cluster of size 1)
+        similarity index
     method : see scipy.hierarchy.linkage(), all except 'centroid' produce
         pretty much the same result
     metric : see scipy.hierarchy.linkage(), make sure to use 'euclidean' in
@@ -150,13 +148,13 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean'):
     Returns
     -------
     clusters : nested list
-        key = number of the cluster, value = list of filenames in the cluster
         [[filename1, filename5],                    # cluster 1
          [filename23],                              # cluster 2
          [filename48, filename2, filename42, ...],  # cluster 3
          ...
          ]
     """
+    assert 0 <= sim <= 1, "sim not 0..1"
     # array(list(...)): 2d array
     #   [[... fingerprint of image1 (4096,) ...],
     #    [... fingerprint of image2 (4096,) ...],
@@ -168,7 +166,7 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean'):
     # dendrogram)
     Z = hierarchy.linkage(dfps, method=method, metric=metric)
     # cut dendrogram, extract clusters
-    cut = hierarchy.fcluster(Z, t=dfps.max()*sim, criterion='distance')
+    cut = hierarchy.fcluster(Z, t=dfps.max()*(1.0-sim), criterion='distance')
     cluster_dct = dict((ii,[]) for ii in np.unique(cut))
     for iimg,iclus in enumerate(cut):
         cluster_dct[iclus].append(files[iimg])
