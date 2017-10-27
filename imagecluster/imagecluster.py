@@ -15,7 +15,7 @@ pj = os.path.join
 
 def get_model():
     """Keras Model of the VGG16 network, with the output layer set to the
-    pre-last fully connected layer 'fc2' of shape (4096,)."""
+    second-to-last fully connected layer 'fc2' of shape (4096,)."""
     # base_model.summary():
     #     ....
     #     block5_conv4 (Conv2D)        (None, 15, 15, 512)       2359808

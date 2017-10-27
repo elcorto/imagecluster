@@ -1,0 +1,5 @@
+* use logging instead of print
+
+* Split imagecluster.make_links() into grouping clusters of same size (e.g.
+  group_clusters() and link creation (make_links()). Add test for
+  group_clusters().

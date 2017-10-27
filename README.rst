@@ -8,13 +8,15 @@ then used to cluster similar images.
 Install
 =======
 
-::
+.. code:: sh
 
     $ git clone https://github.com/elcorto/imagecluster.git
     $ cd imagecluster
     $ pip3 install -e .
 
-or::
+or
+
+.. code:: sh
 
     $ python3 setup develop --prefix=...
 
@@ -28,9 +30,11 @@ See ``imagecluster.main.main()`` for a usage example.
 
 If there is no fingerprints database, it will first run all images through the
 NN model and calculate fingerprints. Then it will cluster the images based on
-the fingerprints and a similarity index (more details below).
+the fingerprints and a similarity index ``sim=0...1`` (more details below).
 
-Example session::
+Example session:
+
+.. code:: python
 
     >>> from imagecluster import main
     >>> main.main('/path/to/testpics/', sim=0.5)
@@ -49,7 +53,9 @@ Example session::
     5 : 1
     10 : 1
 
-Have a look at the clusters (as dirs with symlinks to the relevant files)::
+Have a look at the clusters (as dirs with symlinks to the relevant files):
+
+.. code:: sh
 
     $ tree /path/to/testpics
     /path/to/testpics/clusters
@@ -79,6 +85,20 @@ Have a look at the clusters (as dirs with symlinks to the relevant files)::
 
 If you run this again on the same directory, only the clustering will be
 repeated.
+
+Similarity index
+----------------
+
+The index (0...1) defines the minimum required similarity that images must have
+in order to be clustered together. A high index means to put only very similar
+images in one cluster. The extreme case of similarity index 1.0 means to require
+100% similarity and thus to put each image in a cluster of size 1 (unless there
+are completely equal images). In contrast, low values imply low required
+similarity. This results in less strict clustering which will put more but less
+similar images in a cluster. A value of 0.0 (zero required similarity) is equal
+to putting all images in one single cluster since all images are treated as
+equal.
+
 
 Methods
 =======
@@ -139,17 +159,8 @@ Clustering
 We use hierarchical clustering, see ``imagecluster.calc.cluster()``. The image
 fingerprints (4096-dim vectors) are compared using a distance metric and
 similar images are put together in a cluster. The threshold for what counts as
-similar is defined by a similar index (again, see ``calc.cluster()``).
+similar is defined by the similarity index (again, see ``calc.cluster()``).
 
-The index (0...1) defines the minimum required similarity that images must have
-in order to be clustered together. A high index means to put only very similar
-images in one cluster. The extreme case of similarity index 1 means to require
-100% similarity and thus to put each image in a cluster of size 1 (unless there
-are completely equal images). In contrast, low values imply low required
-similarity. This results in less strict clustering which will put more but less
-similar images in a cluster. A value of 0 (zero required similarity) is equal
-to putting all images in one single cluster since all images are treated as
-equal.
 
 Tests
 =====
