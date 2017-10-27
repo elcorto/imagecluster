@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # publish on pypi
 # ---------------
 #   $ python3 setup.py sdist
@@ -50,7 +52,7 @@ setup(
     url='https://github.com/elcorto/imagecluster',
     author='Steve Schmerler',
     author_email='git@elcorto.com',
-    license='GPLv3',
+    license='BSD 3-Clause',
     keywords='image cluster vgg16 deep-learning',
     packages=['imagecluster'],
     install_requires=install_requires,
