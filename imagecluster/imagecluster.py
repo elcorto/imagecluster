@@ -188,7 +188,7 @@ def make_links(clusters, cluster_dr):
                 cdct_multi[nn].append(x)
 
     print("cluster dir: {}".format(cluster_dr))
-    print("items per cluster : number of such clusters")
+    print("cluster size : ncluster")
     if os.path.exists(cluster_dr):
         shutil.rmtree(cluster_dr)
     for nn in np.sort(list(cdct_multi.keys())):

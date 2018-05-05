@@ -33,7 +33,7 @@ NN model and calculate fingerprints. Then it will cluster the images based on
 the fingerprints and a similarity index ``sim=0...1`` (more details below).
 
 Example session:
-
+ 
 .. code:: python
 
     >>> from imagecluster import main
@@ -46,7 +46,7 @@ Example session:
     /path/to/testpics/DSC_1087.JPG
     clustering ...
     cluster dir: /path/to/testpics/clusters
-    items per cluster : number of such clusters
+    cluster size : ncluster
     2 : 7
     3 : 2
     4 : 4
@@ -86,22 +86,27 @@ Have a look at the clusters (as dirs with symlinks to the relevant files):
 If you run this again on the same directory, only the clustering will be
 repeated.
 
-Similarity index
-----------------
-
-The index (0...1) defines the minimum required similarity that images must have
-in order to be clustered together. A high index means to put only very similar
-images in one cluster. The extreme case of similarity index 1.0 means to require
-100% similarity and thus to put each image in a cluster of size 1 (unless there
-are completely equal images). In contrast, low values imply low required
-similarity. This results in less strict clustering which will put more but less
-similar images in a cluster. A value of 0.0 (zero required similarity) is equal
-to putting all images in one single cluster since all images are treated as
-equal.
-
-
 Methods
 =======
+
+Clustering and similarity index
+-------------------------------
+
+We use `hierarchical clustering <hc_>`_ (``imagecluster.cluster()``).
+The image fingerprints (4096-dim vectors) are compared using a distance metric
+and similar images are put together in a cluster. The threshold for what counts
+as similar is defined by a similarity index.
+
+We use the similarity index ``sim=0...1`` to define the height at which we cut
+through the `dendogram <dendo_>`_ tree built by the hierarchical clustering.
+``sim=0`` is the root of the dendogram where there is only one node (= all
+images in one cluster). ``sim=1`` is equal to the top of the dendogram tree,
+where each image is its own cluster. By varying the index between 0 and 1, we
+thus increase the number of clusters from 1 to the number of images.
+
+However, note that we only report clusters with at least 2 images, such that
+``sim=1`` will in fact produce no results at all (unless there are completely
+identical images).
 
 Image fingerprints
 ------------------
@@ -109,7 +114,7 @@ Image fingerprints
 The original goal was to have a clustering based on classification of image
 *content* such as: image A this an image of my kitchen; image B is also an
 image of my kitchen, only from a different angle and some persons in the
-foreground, but the information -- this is my kitchen -- is the same. This is a
+foreground, but the information (this is my kitchen) is the same. This is a
 feature-detection task which relies on the ability to recognize the content of
 the scene, regardless of other scene parameters (like view angle, color, light,
 ...). It turns out that we can use deep convolutional neural networks
@@ -153,21 +158,14 @@ using this information. But then one would have labeled all images by hand
 again.
 
 
-Clustering
-----------
-
-We use hierarchical clustering, see ``imagecluster.calc.cluster()``. The image
-fingerprints (4096-dim vectors) are compared using a distance metric and
-similar images are put together in a cluster. The threshold for what counts as
-similar is defined by the similarity index (again, see ``calc.cluster()``).
-
-
 Tests
 =====
 
 Run ``nosetests3`` (nosetests for Python3, Linux).
-
+ 
 .. _VGG16: https://arxiv.org/abs/1409.1556
 .. _Keras: https://keras.io
 .. _ImageNet: http://www.image-net.org/
 .. _alexcnwy: https://github.com/alexcnwy
+.. _hc: https://en.wikipedia.org/wiki/Hierarchical_clustering
+.. _dendo: https://en.wikipedia.org/wiki/Dendrogram
