@@ -22,6 +22,7 @@ install_requires = []
 reqs = [('numpy', 'numpy', None, None),
         ('tensorflow', 'tensorflow', None, None),
         ('keras', 'keras', None, None),
+        ('Pillow', 'PIL', None, None),
         ]
 
 for pip_name,import_name,op,ver in reqs:
