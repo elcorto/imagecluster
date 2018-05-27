@@ -38,14 +38,14 @@ Example session:
 
     >>> from imagecluster import main
     >>> main.main('/path/to/testpics/', sim=0.5)
-    no fingerprints database /path/to/testpics/fingerprints.pk found
+    no fingerprints database /path/to/testpics/imagecluster/fingerprints.pk found
     running all images through NN model ...
     /path/to/testpics/DSC_1061.JPG
     /path/to/testpics/DSC_1080.JPG
     ...
     /path/to/testpics/DSC_1087.JPG
     clustering ...
-    cluster dir: /path/to/testpics/clusters
+    cluster dir: /path/to/testpics/imagecluster/clusters
     cluster size : ncluster
     2 : 7
     3 : 2
@@ -57,8 +57,8 @@ Have a look at the clusters (as dirs with symlinks to the relevant files):
 
 .. code:: sh
 
-    $ tree /path/to/testpics
-    /path/to/testpics/clusters
+    $ tree /path/to/testpics/imagecluster/clusters
+    /path/to/testpics/imagecluster/clusters
     ├── cluster_with_10
     │   └── cluster_0
     │       ├── DSC_1068.JPG -> /path/to/testpics/DSC_1068.JPG

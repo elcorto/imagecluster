@@ -3,3 +3,10 @@
 * Split imagecluster.make_links() into grouping clusters of same size (e.g.
   group_clusters() and link creation (make_links()). Add test for
   group_clusters().
+
+* When calculating fingerprints: If fingerprints.pk is present, check for new
+  image files and calculate for those only.
+
+* Add option to main() for passing a global fingerprints.pk file, which gets
+  updated. Remove hard-coded location
+  /path/to/pics/imagecluster/fingerprints.pk
