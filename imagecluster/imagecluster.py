@@ -64,7 +64,7 @@ def fingerprint(fn, model, size):
     #
     # (224, 224, 3)
     ##img = image.load_img(fn, target_size=size)
-    img = PIL.Image.open(fn).resize(size, 2)
+    img = PIL.Image.open(fn).resize(size, 3)
     
     # (224, 224, {3,1})
     arr3d = image.img_to_array(img)
