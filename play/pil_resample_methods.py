@@ -19,26 +19,32 @@
 # Each PIL.Image.<method> variable is actually an integer (e.g. Image.NEAREST
 # is 0).
 #
-# We tried the resample interpolation methods and measured the speed (ipython's
-# timeit) for resizing an image 3840x2160 -> 8x8. We also compared the resample
+# We test the differrnt resample interpolation methods and measure the speed
+# for resizing an image (768, 1024) -> (224,224). We also compare the resample
 # quality as difference to the best possible resample result, which we defined
 # to be the LANCZOS method (from visual inspection and b/c it is
 # computationally the most elaborate).
 #
-#                                      speed [ms]     
-# Image.NEAREST                   = 0  29.9e-3
-# Image.LANCZOS = Image.ANTIALIAS = 1  123          # reference result
-# Image.BILINEAR                  = 2  47
-# Image.BICUBIC                   = 3  87
+# methods:
+#                                         
+# NEAREST             = 0
+# LANCZOS = ANTIALIAS = 1 # reference result
+# BILINEAR            = 2
+# BICUBIC             = 3
 #
-# resample quality (see pil_resample_methods.py)
-# method = 0, diff to ref(1) = 1.0
-# method = 1, diff to ref(1) = 0.0
-# method = 2, diff to ref(1) = 0.135679761399
-# method = 3, diff to ref(1) = 0.0549413095836
-#
-# -> method=2 is probably the best compromise between quality and speed
+# resample quality (output from this script):
+# 
+#    method  quality (ref=1)   speedup  speedup/quality      time
+# 0     0.0         1.000000  6.233622         6.233622  0.031676
+# 1     1.0         0.000000  1.000000              NaN  0.197458
+# 2     2.0         0.381500  2.269723         5.949475  0.086996
+# 3     3.0         0.160711  1.499384         9.329660  0.131693
+# 
+# Method 0 is the fastest, but has the highest difference to the reference
+# result. Visually, methods 1 (reference) and 3 are almost indistinguishable.
+# Taking speed into account, method 3 is the best compromise (speedup/quality).
 
+import timeit
 
 import PIL
 import scipy.misc
@@ -47,30 +53,40 @@ use('Agg')
 from matplotlib import pyplot as plt
 import numpy as np
 
-# face() retruns a (x,y,3) RGB array
+import pandas as pd
+
+# face() retruns a (768, 1024, 3) RGB array
 im = PIL.Image.fromarray(scipy.misc.face())
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-nn = 16
-img1d = []
-for method in range(4):
-    ##arr = np.array(im.convert('L').resize((nn,nn),method).getdata(), dtype=float).reshape(nn,nn)
-    # much faster
-    arr = np.array(im.convert('L').resize((nn,nn), method), dtype=float)
+nn = 224
+nmeth = 4
+imgs = np.empty((nmeth, nn, nn))
+timings = []
+for method in range(nmeth):
+    stmt = "np.array(im.convert('L').resize((nn,nn), method), dtype=float)"
+    ctx = dict(im=im, method=method, nn=nn, np=np)
+    timings.append(min(timeit.repeat(stmt, number=20, repeat=5, globals=ctx)))
+    arr = eval(stmt)
     ax.matshow(arr, cmap=cm.gray)
     fig.savefig('method_{}.png'.format(method))
     ax.cla()
-    img1d.append(arr.flatten())
+    imgs[method,...] = arr
 
 refidx = 1
-ref = img1d[refidx]
-diffs = []
-for m,arr1d in enumerate(img1d):
-    diffs.append(np.sqrt(((ref - arr1d)**2.0).sum()))
-
-diffs = np.array(diffs)
+diffs = np.sqrt(((imgs - imgs[refidx,...][None,...])**2.0).sum(axis=(1,2)))
 diffs = diffs / diffs.max()
-for m,d in enumerate(diffs):
-    msg = "method = {m}, diff to ref({refidx}) = {d}"
-    print(msg.format(**dict(m=m, refidx=refidx,d=d)))
+df = pd.DataFrame()
+for method,tup in enumerate(zip(timings,diffs)):
+    time,quality = tup
+    speedup = timings[refidx]/time
+    row = {'method': method,
+           f'quality (ref={refidx})': quality,
+           'time': time,
+           'speedup': speedup,
+           'speedup/quality': np.nan if method == refidx else speedup/quality,
+           }
+    df=df.append(row, ignore_index=True)
+
+print(df)
