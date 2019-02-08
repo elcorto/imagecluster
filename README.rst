@@ -97,9 +97,9 @@ and similar images are put together in a cluster. The threshold for what counts
 as similar is defined by a similarity index.
 
 We use the similarity index ``sim=0...1`` to define the height at which we cut
-through the `dendogram <dendo_>`_ tree built by the hierarchical clustering.
-``sim=0`` is the root of the dendogram where there is only one node (= all
-images in one cluster). ``sim=1`` is equal to the top of the dendogram tree,
+through the `dendrogram <dendro_>`_ tree built by the hierarchical clustering.
+``sim=0`` is the root of the dendrogram where there is only one node (= all
+images in one cluster). ``sim=1`` is equal to the top of the dendrogram tree,
 where each image is its own cluster. By varying the index between 0 and 1, we
 thus increase the number of clusters from 1 to the number of images.
 
@@ -167,4 +167,4 @@ Run ``nosetests3`` (nosetests for Python3, Linux).
 .. _ImageNet: http://www.image-net.org/
 .. _alexcnwy: https://github.com/alexcnwy
 .. _hc: https://en.wikipedia.org/wiki/Hierarchical_clustering
-.. _dendo: https://en.wikipedia.org/wiki/Dendrogram
+.. _dendro: https://en.wikipedia.org/wiki/Dendrogram
