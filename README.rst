@@ -10,15 +10,14 @@ Install
 
 .. code:: sh
 
-    $ git clone https://github.com/elcorto/imagecluster.git
-    $ cd imagecluster
     $ pip3 install -e .
 
-or
+or if you have the ``requirements.txt`` already installed (e.g. by your system's
+package manager)
 
 .. code:: sh
 
-    $ python3 setup develop --prefix=...
+    $ pip3 install -e . --no-deps
 
 Usage
 =====
@@ -33,7 +32,7 @@ NN model and calculate fingerprints. Then it will cluster the images based on
 the fingerprints and a similarity index ``sim=0...1`` (more details below).
 
 Example session:
- 
+
 .. code:: python
 
     >>> from imagecluster import main
@@ -125,7 +124,7 @@ like chair, boat, car .. and kitchen. Simple image hashing, which we used
 previously, is rather limited in that respect. It only does a very pedestrian
 smoothing / low-pass filtering to reduce the noise and extract the "important"
 parts of the image. This helps to find duplicates and almost-duplicates in a
-collection of photos. 
+collection of photos.
 
 To this end, we use a pre-trained NN (VGG16_ as implemented by Keras_). The
 network was trained on ImageNet_ and is able to categorize images into 1000
@@ -137,7 +136,7 @@ connected layer (4096 nodes) as image fingerprints (numpy 1d array of shape
 The package can detect images which are rather similar, e.g. the same scene
 photographed twice or more with some camera movement in between, or a scene
 with the same background and e.g. one person exchanged. This was also possible
-with image hashes. 
+with image hashes.
 
 Now with NN-based fingerprints, we also cluster all sorts of images which have,
 e.g. mountains, tents, or beaches, so this is far better. However, if you run
@@ -162,7 +161,7 @@ Tests
 =====
 
 Run ``nosetests3`` (nosetests for Python3, Linux).
- 
+
 .. _VGG16: https://arxiv.org/abs/1409.1556
 .. _Keras: https://keras.io
 .. _ImageNet: http://www.image-net.org/
