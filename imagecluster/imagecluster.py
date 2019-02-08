@@ -13,9 +13,18 @@ from imagecluster import common as co
 pj = os.path.join
 
 
-def get_model():
-    """Keras Model of the VGG16 network, with the output layer set to the
-    second-to-last fully connected layer 'fc2' of shape (4096,)."""
+def get_model(layer='fc2'):
+    """Keras Model of the VGG16 network, with the output layer set to `layer`.
+
+    The default layer is the second-to-last fully connected layer 'fc2' of
+    shape (4096,).
+
+    Parameters
+    ----------
+    layer : str
+        which layer to extract (must be of shape (None, X)), e.g. 'fc2', 'fc1'
+        or 'flatten'
+    """
     # base_model.summary():
     #     ....
     #     block5_conv4 (Conv2D)        (None, 15, 15, 512)       2359808
@@ -32,7 +41,7 @@ def get_model():
     #
     base_model = VGG16(weights='imagenet', include_top=True)
     model = Model(inputs=base_model.input,
-                  outputs=base_model.get_layer('fc2').output)
+                  outputs=base_model.get_layer(layer).output)
     return model
 
 

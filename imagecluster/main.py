@@ -8,22 +8,25 @@ pj = os.path.join
 ic_base_dir = 'imagecluster'
 
 
-def main(imagedir, sim=0.5):
+def main(imagedir, sim=0.5, layer='fc2'):
     """Example main app using this library.
-    
+
     Parameters
     ----------
     imagedir : str
         path to directory with images
     sim : float (0..1)
-        similarity index (see imagecluster.cluster())
+        similarity index (see :func:`imagecluster.cluster`)
+    layer : str
+        which layer to use as feature vector (see
+        :func:`imagecluster.get_model`)
     """
     dbfn = pj(imagedir, ic_base_dir, 'fingerprints.pk')
     if not os.path.exists(dbfn):
         os.makedirs(os.path.dirname(dbfn), exist_ok=True)
         print("no fingerprints database {} found".format(dbfn))
         files = co.get_files(imagedir)
-        model = ic.get_model()
+        model = ic.get_model(layer=layer)
         print("running all images through NN model ...".format(dbfn))
         fps = ic.fingerprints(files, model, size=(224,224))
         co.write_pk(fps, dbfn)
