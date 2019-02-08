@@ -62,7 +62,7 @@ def fingerprint(fn, model, size):
     fingerprint : 1d array
     """
     print(fn)
-    
+
     # keras.preprocessing.image.load_img() uses img.rezize(shape) with the
     # default interpolation of PIL.Image.resize() which is pretty bad (see
     # imagecluster/play/pil_resample_methods.py). Given that we are restricted
@@ -74,10 +74,10 @@ def fingerprint(fn, model, size):
     # (224, 224, 3)
     ##img = image.load_img(fn, target_size=size)
     img = PIL.Image.open(fn).resize(size, 3)
-    
+
     # (224, 224, {3,1})
     arr3d = image.img_to_array(img)
-    
+
     # (224, 224, 1) -> (224, 224, 3)
     #
     # Simple hack to convert a grayscale image to fake RGB by replication of
@@ -90,10 +90,10 @@ def fingerprint(fn, model, size):
     # VGG16).
     if arr3d.shape[2] == 1:
         arr3d = arr3d.repeat(3, axis=2)
-    
+
     # (1, 224, 224, 3)
     arr4d = np.expand_dims(arr3d, axis=0)
-    
+
     # (1, 224, 224, 3)
     arr4d_pp = preprocess_input(arr4d)
     return model.predict(arr4d_pp)[0,:]
@@ -112,11 +112,12 @@ def fingerprint(fn, model, size):
 ##    print(fn)
 ##    return fn, fingerprint(fn, model, size)
 ##
+##import functools, multiprocessing
 ##def fingerprints(files, model, size=(224,224)):
 ##    worker = functools.partial(_worker,
 ##                               model=model,
 ##                               size=size)
-##    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+##    pool = multiprocessing.Pool(multiprocessing.cpu_count()/2)
 ##    return dict(pool.map(worker, files))
 
 
@@ -140,7 +141,7 @@ def fingerprints(files, model, size=(224,224)):
     return dict((fn, fingerprint(fn, model, size)) for fn in files)
 
 
-def cluster(fps, sim=0.5, method='average', metric='euclidean'):
+def cluster(fps, sim=0.5, method='average', metric='euclidean', extra_out=False):
     """Hierarchical clustering of images based on image fingerprints.
 
     Parameters
@@ -153,33 +154,43 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean'):
         pretty much the same result
     metric : see scipy.hierarchy.linkage(), make sure to use 'euclidean' in
         case of method='centroid', 'median' or 'ward'
+    extra_out : bool
+        additionally return internal variables for debugging
 
     Returns
     -------
+    clusters [, extra]
     clusters : nested list
         [[filename1, filename5],                    # cluster 1
          [filename23],                              # cluster 2
          [filename48, filename2, filename42, ...],  # cluster 3
          ...
          ]
+    extra : dict
+        if `extra_out` is True
     """
     assert 0 <= sim <= 1, "sim not 0..1"
+    files = list(fps.keys())
     # array(list(...)): 2d array
     #   [[... fingerprint of image1 (4096,) ...],
     #    [... fingerprint of image2 (4096,) ...],
     #    ...
     #    ]
     dfps = distance.pdist(np.array(list(fps.values())), metric)
-    files = list(fps.keys())
     # hierarchical/agglomerative clustering (Z = linkage matrix, construct
-    # dendrogram)
+    # dendrogram), plot: scipy.cluster.hierarchy.dendrogram(Z)
     Z = hierarchy.linkage(dfps, method=method, metric=metric)
     # cut dendrogram, extract clusters
     cut = hierarchy.fcluster(Z, t=dfps.max()*(1.0-sim), criterion='distance')
     cluster_dct = dict((ii,[]) for ii in np.unique(cut))
     for iimg,iclus in enumerate(cut):
         cluster_dct[iclus].append(files[iimg])
-    return list(cluster_dct.values())
+    clusters = list(cluster_dct.values())
+    if extra_out:
+        extra = {'Z': Z, 'dfps': dfps, 'cluster_dct': cluster_dct, 'cut': cut}
+        return clusters, extra
+    else:
+        return clusters
 
 
 def make_links(clusters, cluster_dr):
