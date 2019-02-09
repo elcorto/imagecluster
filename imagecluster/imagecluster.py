@@ -3,12 +3,9 @@ from scipy.cluster import hierarchy
 import numpy as np
 
 import PIL.Image, os, shutil
-from keras.applications.vgg16 import VGG16
+from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing import image
-from keras.applications.vgg16 import preprocess_input
 from keras.models import Model
-
-from imagecluster import common as co
 
 pj = os.path.join
 
@@ -141,7 +138,8 @@ def fingerprints(files, model, size=(224,224)):
     return dict((fn, fingerprint(fn, model, size)) for fn in files)
 
 
-def cluster(fps, sim=0.5, method='average', metric='euclidean', extra_out=False):
+def cluster(fps, sim=0.5, method='average', metric='euclidean',
+            extra_out=False, print_stats=True, min_elements=1):
     """Hierarchical clustering of images based on image fingerprints.
 
     Parameters
@@ -156,16 +154,22 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean', extra_out=False)
         case of method='centroid', 'median' or 'ward'
     extra_out : bool
         additionally return internal variables for debugging
+    print_stats : bool
+    min_elements : int
+        return clusters with at least that many elements
 
     Returns
     -------
     clusters [, extra]
-    clusters : nested list
-        [[filename1, filename5],                    # cluster 1
-         [filename23],                              # cluster 2
-         [filename48, filename2, filename42, ...],  # cluster 3
-         ...
-         ]
+    clusters : dict
+        We call a list of file names a "cluster".
+        keys = size of clusters (number of elements (images))
+        value = list of clusters with that size
+        {nelem : [[filename, filename, ...],
+                  [filename, filename, ...],
+                  ...
+                  ],
+         nelem : [...]}
     extra : dict
         if `extra_out` is True
     """
@@ -181,11 +185,25 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean', extra_out=False)
     # dendrogram), plot: scipy.cluster.hierarchy.dendrogram(Z)
     Z = hierarchy.linkage(dfps, method=method, metric=metric)
     # cut dendrogram, extract clusters
+    # cut=[12,  3, 29, 14, 28, 27,...]: image cut[i] belongs to cluster i
     cut = hierarchy.fcluster(Z, t=dfps.max()*(1.0-sim), criterion='distance')
     cluster_dct = dict((ii,[]) for ii in np.unique(cut))
     for iimg,iclus in enumerate(cut):
         cluster_dct[iclus].append(files[iimg])
-    clusters = list(cluster_dct.values())
+    # group all clusters (cluster = list_of_files) of equal size together
+    # {number_of_files1: [[list_of_files], [list_of_files],...],
+    #  number_of_files2: [[list_of_files],...],
+    # }
+    clusters = {}
+    for cluster in cluster_dct.values():
+        nelem = len(cluster)
+        if nelem > min_elements:
+            if not (nelem in clusters.keys()):
+                clusters[nelem] = [cluster]
+            else:
+                clusters[nelem].append(cluster)
+    if print_stats:
+        print_cluster_stats(clusters=clusters)
     if extra_out:
         extra = {'Z': Z, 'dfps': dfps, 'cluster_dct': cluster_dct, 'cut': cut}
         return clusters, extra
@@ -193,32 +211,27 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean', extra_out=False)
         return clusters
 
 
-def make_links(clusters, cluster_dr):
-    # group all clusters (cluster = list_of_files) of equal size together
-    # {number_of_files1: [[list_of_files], [list_of_files],...],
-    #  number_of_files2: [[list_of_files],...],
-    # }
-    cdct_multi = {}
-    for x in clusters:
-        nn = len(x)
-        if nn > 1:
-            if not (nn in cdct_multi.keys()):
-                cdct_multi[nn] = [x]
-            else:
-                cdct_multi[nn].append(x)
+def cluster_stats(clusters):
+    return {k:len(v) for k,v in clusters.items()}
 
+
+def print_cluster_stats(clusters):
+    print("#images : #clusters")
+    stats = cluster_stats(clusters)
+    for nelem in np.sort(list(stats.keys())):
+        print("{} : {}".format(nelem, stats[nelem]))
+
+
+def make_links(clusters, cluster_dr):
     print("cluster dir: {}".format(cluster_dr))
-    print("cluster size : ncluster")
     if os.path.exists(cluster_dr):
         shutil.rmtree(cluster_dr)
-    for nn in np.sort(list(cdct_multi.keys())):
-        cluster_list = cdct_multi[nn]
-        print("{} : {}".format(nn, len(cluster_list)))
-        for iclus, lst in enumerate(cluster_list):
+    for nelem, group in clusters.items():
+        for iclus, cluster in enumerate(group):
             dr = pj(cluster_dr,
-                    'cluster_with_{}'.format(nn),
+                    'cluster_with_{}'.format(nelem),
                     'cluster_{}'.format(iclus))
-            for fn in lst:
+            for fn in cluster:
                 link = pj(dr, os.path.basename(fn))
                 os.makedirs(os.path.dirname(link), exist_ok=True)
                 os.symlink(os.path.abspath(fn), link)
