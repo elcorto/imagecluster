@@ -162,6 +162,12 @@ Tests
 
 Run ``nosetests3`` (nosetests for Python3, Linux).
 
+Related projects
+================
+
+https://artsexperiments.withgoogle.com/tsnemap/
+https://github.com/YaleDHLab/pix-plot
+
 .. _VGG16: https://arxiv.org/abs/1409.1556
 .. _Keras: https://keras.io
 .. _ImageNet: http://www.image-net.org/
