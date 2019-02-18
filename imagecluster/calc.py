@@ -156,7 +156,7 @@ def fingerprints(ias, model):
 
 
 def cluster(fps, sim=0.5, method='average', metric='euclidean',
-            extra_out=False, print_stats=True, min_elements=1):
+            extra_out=False, print_stats=True, min_csize=2):
     """Hierarchical clustering of images based on image fingerprints.
 
     Parameters
@@ -172,7 +172,7 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean',
     extra_out : bool
         additionally return internal variables for debugging
     print_stats : bool
-    min_elements : int
+    min_csize : int
         return clusters with at least that many elements
 
     Returns
@@ -180,17 +180,18 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean',
     clusters [, extra]
     clusters : dict
         We call a list of file names a "cluster".
-        keys = size of clusters (number of elements (images) `nelem`)
+        keys = size of clusters (number of elements (images) `csize`)
         value = list of clusters with that size
-        {nelem : [[filename, filename, ...],
+        {csize : [[filename, filename, ...],
                   [filename, filename, ...],
                   ...
                   ],
-         nelem : [...]}
+         csize : [...]}
     extra : dict
         if `extra_out` is True
     """
     assert 0 <= sim <= 1, "sim not 0..1"
+    assert min_csize >= 1, "min_csize must be >= 1"
     files = list(fps.keys())
     # array(list(...)): 2d array
     #   [[... fingerprint of image1 (4096,) ...],
@@ -213,12 +214,12 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean',
     # }
     clusters = {}
     for cluster in cluster_dct.values():
-        nelem = len(cluster)
-        if nelem > min_elements:
-            if not (nelem in clusters.keys()):
-                clusters[nelem] = [cluster]
+        csize = len(cluster)
+        if csize >= min_csize:
+            if not (csize in clusters.keys()):
+                clusters[csize] = [cluster]
             else:
-                clusters[nelem].append(cluster)
+                clusters[csize].append(cluster)
     if print_stats:
         print_cluster_stats(clusters=clusters)
     if extra_out:
@@ -235,8 +236,8 @@ def cluster_stats(clusters):
 def print_cluster_stats(clusters):
     print("#images : #clusters")
     stats = cluster_stats(clusters)
-    for nelem in np.sort(list(stats.keys())):
-        print("{} : {}".format(nelem, stats[nelem]))
+    for csize in np.sort(list(stats.keys())):
+        print("{} : {}".format(csize, stats[csize]))
     if len(stats) > 0:
         nimg = np.array(list(stats.items())).prod(axis=1).sum()
     else:

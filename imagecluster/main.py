@@ -15,7 +15,7 @@ ic_base_dir = 'imagecluster'
 
 
 def main(imagedir, sim=0.5, layer='fc2', size=(224,224), links=True, vis=False,
-         maxelem=None, pca=False, pca_params=dict(n_components=0.9)):
+         max_csize=None, pca=False, pca_params=dict(n_components=0.9)):
     """Example main app using this library.
 
     Upon first invocation, the image and fingerprint databases are built and
@@ -42,7 +42,7 @@ def main(imagedir, sim=0.5, layer='fc2', size=(224,224), links=True, vis=False,
         create dirs with links
     vis : bool
         plot images in clusters
-    maxelem : max number of images per cluster for visualization (see
+    max_csize : max number of images per cluster for visualization (see
         :mod:`~postproc`)
     pca : bool
         Perform PCA on fingerprints before clustering, using `pca_params`.
@@ -89,4 +89,4 @@ def main(imagedir, sim=0.5, layer='fc2', size=(224,224), links=True, vis=False,
     if vis:
         if ias is None:
             ias = co.read_pk(ias_fn)
-        pp.visualize(clusters, ias, maxelem=maxelem)
+        pp.visualize(clusters, ias, max_csize=max_csize)

@@ -9,7 +9,7 @@ from . import calc as ic
 pj = os.path.join
 
 
-def plot_clusters(clusters, ias, maxelem=None):
+def plot_clusters(clusters, ias, max_csize=None):
     """Plot `clusters` of images in `ias`.
 
     For interactive work, use :func:`visualize` instead.
@@ -22,8 +22,8 @@ def plot_clusters(clusters, ias, maxelem=None):
     stats = ic.cluster_stats(clusters)
     ncols = sum(list(stats.values()))
     nrows = max(stats.keys())
-    if maxelem is not None:
-        nrows = min(maxelem, nrows)
+    if max_csize is not None:
+        nrows = min(max_csize, nrows)
     shape = ias[list(ias.keys())[0]].shape[:2]
     arr = np.ones((nrows*shape[0], ncols*shape[1], 3), dtype=int) * 255
     icol = -1
@@ -51,10 +51,10 @@ def make_links(clusters, cluster_dr):
     print("cluster dir: {}".format(cluster_dr))
     if os.path.exists(cluster_dr):
         shutil.rmtree(cluster_dr)
-    for nelem, group in clusters.items():
+    for csize, group in clusters.items():
         for iclus, cluster in enumerate(group):
             dr = pj(cluster_dr,
-                    'cluster_with_{}'.format(nelem),
+                    'cluster_with_{}'.format(csize),
                     'cluster_{}'.format(iclus))
             for fn in cluster:
                 link = pj(dr, os.path.basename(fn))

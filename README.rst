@@ -167,7 +167,7 @@ Quality of clustering & parameters to tune
 You may have noticed that in the example above, only 17 out of 25 images are
 put into clusters. The others are not assigned to any cluster. Technically they
 are in clusters of size 1, which we don't report by default (unless you use
-``calc.cluster(..., min_elements=0)``). One can now start to lower ``sim`` to
+``calc.cluster(..., min_csize=1)``). One can now start to lower ``sim`` to
 find a good balance of clustering accuracy and the tolerable amount of
 dissimilarity among images within a cluster.
 
