@@ -1,4 +1,8 @@
 import os
+from collections import OrderedDict
+
+import numpy as np
+from sklearn.decomposition import PCA
 
 from imagecluster import calc as ic
 from imagecluster import common as co
@@ -11,7 +15,7 @@ ic_base_dir = 'imagecluster'
 
 
 def main(imagedir, sim=0.5, layer='fc2', size=(224,224), links=True, vis=False,
-         maxelem=None):
+         maxelem=None, pca=False, pca_params=dict(n_components=0.9)):
     """Example main app using this library.
 
     Upon first invocation, the image and fingerprint databases are built and
@@ -40,6 +44,10 @@ def main(imagedir, sim=0.5, layer='fc2', size=(224,224), links=True, vis=False,
         plot images in clusters
     maxelem : max number of images per cluster for visualization (see
         :mod:`~postproc`)
+    pca : bool
+        Perform PCA on fingerprints before clustering, using `pca_params`.
+    pca_params : dict
+        kwargs to sklearn's PCA
 
     Notes
     -----
@@ -67,6 +75,13 @@ def main(imagedir, sim=0.5, layer='fc2', size=(224,224), links=True, vis=False,
     else:
         print(f"loading fingerprints database {fps_fn} ...")
         fps = co.read_pk(fps_fn)
+    if pca:
+        # Yes in recent Pythons, dicts are ordered in CPython, but still.
+        _fps = OrderedDict(fps)
+        X = np.array(list(_fps.values()))
+        Xp = PCA(**pca_params).fit(X).transform(X)
+        fps = {k:v for k,v in zip(_fps.keys(), Xp)}
+        print("pca dims:", Xp.shape[1])
     print("clustering ...")
     clusters = ic.cluster(fps, sim)
     if links:
