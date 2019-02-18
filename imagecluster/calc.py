@@ -1,11 +1,18 @@
+import os
+
+import multiprocessing as mp
+import functools
+
+import PIL.Image
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 import numpy as np
 
-import PIL.Image, os, shutil
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing import image
 from keras.models import Model
+
+from . import common
 
 pj = os.path.join
 
@@ -42,39 +49,45 @@ def get_model(layer='fc2'):
     return model
 
 
-def fingerprint(fn, model, size):
-    """Load image from file `fn`, resize to `size` and run through `model`
-    (keras.models.Model).
+# keras.preprocessing.image.load_img() uses img.rezize(shape) with the default
+# interpolation of PIL.Image.resize() which is pretty bad (see
+# imagecluster/play/pil_resample_methods.py). Given that we are restricted to
+# small inputs of 224x224 by the VGG network, we should do our best to keep as
+# much information from the original image as possible. This is a gut feeling,
+# untested. But given that model.predict() is 10x slower than PIL image loading
+# and resizing .. who cares.
+#
+# (224, 224, 3)
+##img = image.load_img(fn, target_size=size)
+##... = image.img_to_array(img)
+def _img_worker(fn, size):
+    print(fn)
+    return fn, image.img_to_array(PIL.Image.open(fn).resize(size, 3),
+                                  dtype=int)
+
+
+def image_arrays(imagedir, size):
+    _f = functools.partial(_img_worker, size=size)
+    with mp.Pool(mp.cpu_count()) as pool:
+        ret = pool.map(_f, common.get_files(imagedir))
+    return dict(ret)
+
+
+def fingerprint(img_arr, model):
+    """Run image array (3d array) run through `model` (keras.models.Model).
 
     Parameters
     ----------
-    fn : str
-        filename
+    img_arr : 3d array
+        (1,x,y) or (x,y,1), depending on keras.preprocessing.image.img_to_array
+        and "jq '.image_data_format' ~/.keras/keras.json"
+        (channels_{first,last}), see :func:`imagecluster.main.image_arrays`
     model : keras.models.Model instance
-    size : tuple
-        input image size (width, height), must match `model`, e.g. (224,224)
 
     Returns
     -------
     fingerprint : 1d array
     """
-    print(fn)
-
-    # keras.preprocessing.image.load_img() uses img.rezize(shape) with the
-    # default interpolation of PIL.Image.resize() which is pretty bad (see
-    # imagecluster/play/pil_resample_methods.py). Given that we are restricted
-    # to small inputs of 224x224 by the VGG network, we should do our best to
-    # keep as much information from the original image as possible. This is a
-    # gut feeling, untested. But given that model.predict() is 10x slower than
-    # PIL image loading and resizing .. who cares.
-    #
-    # (224, 224, 3)
-    ##img = image.load_img(fn, target_size=size)
-    img = PIL.Image.open(fn).resize(size, 3)
-
-    # (224, 224, {3,1})
-    arr3d = image.img_to_array(img)
-
     # (224, 224, 1) -> (224, 224, 3)
     #
     # Simple hack to convert a grayscale image to fake RGB by replication of
@@ -85,47 +98,47 @@ def fingerprint(fn, model, size):
     # the image representation than color, such that this hack makes it possible
     # to process gray-scale images with nets trained on color images (like
     # VGG16).
-    if arr3d.shape[2] == 1:
-        arr3d = arr3d.repeat(3, axis=2)
+    #
+    # We assme channels_last here. Fix if needed.
+    if img_arr.shape[2] == 1:
+        img_arr = img_arr.repeat(3, axis=2)
 
     # (1, 224, 224, 3)
-    arr4d = np.expand_dims(arr3d, axis=0)
+    arr4d = np.expand_dims(img_arr, axis=0)
 
     # (1, 224, 224, 3)
     arr4d_pp = preprocess_input(arr4d)
     return model.predict(arr4d_pp)[0,:]
 
 
-# Cannot use multiprocessing (only tensorflow backend tested):
-# TypeError: can't pickle _thread.lock objects
-# The error doesn't come from functools.partial since those objects are
-# pickable since python3. The reason is the keras.model.Model, which is not
-# pickable. However keras with tensorflow backend runs multi-threaded
-# (model.predict()), so we don't need that. I guess it will scale better if we
-# parallelize over images than to run a muti-threaded tensorflow on each image,
-# but OK. On low core counts (2-4), it won't matter.
+# Cannot use multiprocessing (only tensorflow backend tested, rumor has it that
+# the TF computation graph is not built multiple times, i.e. pickling (what
+# multiprocessing does with _worker) doen't play nice with Keras models which
+# use Tf backend). The call to the parallel version of fingerprints() starts
+# but seems to hang forever. However, Keras with Tensorflow backend runs
+# multi-threaded (model.predict()), so we can sort of live with that. Even
+# though Tensorflow has not the best scaling on the CPU, on low core counts
+# (2-4), it won't matter that much. Also, TF was built to run on GPUs, not
+# scale out multi-core CPUs.
 #
-##def _worker(fn, model, size):
+##def _worker(img_arr, model):
 ##    print(fn)
-##    return fn, fingerprint(fn, model, size)
+##    return fn, fingerprint(img_arr, model)
 ##
-##import functools, multiprocessing
-##def fingerprints(files, model, size=(224,224)):
-##    worker = functools.partial(_worker,
-##                               model=model,
-##                               size=size)
-##    pool = multiprocessing.Pool(multiprocessing.cpu_count()/2)
-##    return dict(pool.map(worker, files))
+##
+##def fingerprints(ias, model):
+##    _f = functools.partial(_worker, model=model)
+##    with mp.Pool(int(mp.cpu_count()/2)) as pool:
+##        ret = pool.map(_f, ias.items())
+##    return dict(ret)
 
-
-def fingerprints(files, model, size=(224,224)):
-    """Calculate fingerprints for all `files`.
+def fingerprints(ias, model):
+    """Calculate fingerprints for all image arrays in `ias`.
 
     Parameters
     ----------
-    files : sequence
-        image filenames
-    model, size : see :func:`fingerprint`
+    ias : see :func:`image_arrays`
+    model : see :func:`fingerprint`
 
     Returns
     -------
@@ -135,7 +148,11 @@ def fingerprints(files, model, size=(224,224)):
          ...
          }
     """
-    return dict((fn, fingerprint(fn, model, size)) for fn in files)
+    fps = {}
+    for fn,img_arr in ias.items():
+        print(fn)
+        fps[fn] = fingerprint(img_arr, model)
+    return fps
 
 
 def cluster(fps, sim=0.5, method='average', metric='euclidean',
@@ -163,7 +180,7 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean',
     clusters [, extra]
     clusters : dict
         We call a list of file names a "cluster".
-        keys = size of clusters (number of elements (images))
+        keys = size of clusters (number of elements (images) `nelem`)
         value = list of clusters with that size
         {nelem : [[filename, filename, ...],
                   [filename, filename, ...],
@@ -220,18 +237,11 @@ def print_cluster_stats(clusters):
     stats = cluster_stats(clusters)
     for nelem in np.sort(list(stats.keys())):
         print("{} : {}".format(nelem, stats[nelem]))
+    if len(stats) > 0:
+        nimg = np.array(list(stats.items())).prod(axis=1).sum()
+    else:
+        nimg = 0
+    print("#images in clusters total: ", nimg)
 
 
-def make_links(clusters, cluster_dr):
-    print("cluster dir: {}".format(cluster_dr))
-    if os.path.exists(cluster_dr):
-        shutil.rmtree(cluster_dr)
-    for nelem, group in clusters.items():
-        for iclus, cluster in enumerate(group):
-            dr = pj(cluster_dr,
-                    'cluster_with_{}'.format(nelem),
-                    'cluster_{}'.format(iclus))
-            for fn in cluster:
-                link = pj(dr, os.path.basename(fn))
-                os.makedirs(os.path.dirname(link), exist_ok=True)
-                os.symlink(os.path.abspath(fn), link)
+

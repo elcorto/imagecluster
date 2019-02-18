@@ -1,15 +1,27 @@
-import os, re
-import numpy as np
-from imagecluster import imagecluster as ic
+import os
+
+from imagecluster import calc as ic
 from imagecluster import common as co
+from imagecluster import postproc as pp
+
 pj = os.path.join
 
 
 ic_base_dir = 'imagecluster'
 
 
-def main(imagedir, sim=0.5, layer='fc2'):
+def main(imagedir, sim=0.5, layer='fc2', size=(224,224), links=True, vis=False,
+         maxelem=None):
     """Example main app using this library.
+
+    Upon first invocation, the image and fingerprint databases are built and
+    written to disk. Each new invocation loads those and only repeats
+        * clustering
+        * creation of links to files in clusters
+        * visualization (if `vis=True`)
+
+    This is good for playing around with the `sim` parameter, for
+    instance, which only influences clustering.
 
     Parameters
     ----------
@@ -20,18 +32,46 @@ def main(imagedir, sim=0.5, layer='fc2'):
     layer : str
         which layer to use as feature vector (see
         :func:`imagecluster.get_model`)
+    size : tuple
+        input image size (width, height), must match `model`, e.g. (224,224)
+    links : bool
+        create dirs with links
+    vis : bool
+        plot images in clusters
+    maxelem : max number of images per cluster for visualization (see
+        :mod:`~postproc`)
+
+    Notes
+    -----
+    imagedir : To select only a subset of the images, create an `imagedir` and
+        symlink your selected images there. In the future, we may add support
+        for passing a list of files, should the need arise. But then again,
+        this function is only an example front-end.
     """
-    dbfn = pj(imagedir, ic_base_dir, 'fingerprints.pk')
-    if not os.path.exists(dbfn):
-        os.makedirs(os.path.dirname(dbfn), exist_ok=True)
-        print("no fingerprints database {} found".format(dbfn))
-        files = co.get_files(imagedir)
+    fps_fn = pj(imagedir, ic_base_dir, 'fingerprints.pk')
+    ias_fn = pj(imagedir, ic_base_dir, 'images.pk')
+    ias = None
+    if not os.path.exists(fps_fn):
+        print(f"no fingerprints database {fps_fn} found")
+        os.makedirs(os.path.dirname(fps_fn), exist_ok=True)
         model = ic.get_model(layer=layer)
-        print("running all images through NN model ...".format(dbfn))
-        fps = ic.fingerprints(files, model, size=(224,224))
-        co.write_pk(fps, dbfn)
+        if not os.path.exists(ias_fn):
+            print(f"create image array database {ias_fn}")
+            ias = ic.image_arrays(imagedir, size=size)
+            co.write_pk(ias, ias_fn)
+        else:
+            ias = co.read_pk(ias_fn)
+        print("running all images through NN model ...")
+        fps = ic.fingerprints(ias, model)
+        co.write_pk(fps, fps_fn)
     else:
-        print("loading fingerprints database {} ...".format(dbfn))
-        fps = co.read_pk(dbfn)
+        print(f"loading fingerprints database {fps_fn} ...")
+        fps = co.read_pk(fps_fn)
     print("clustering ...")
-    ic.make_links(ic.cluster(fps, sim), pj(imagedir, ic_base_dir, 'clusters'))
+    clusters = ic.cluster(fps, sim)
+    if links:
+        pp.make_links(clusters, pj(imagedir, ic_base_dir, 'clusters'))
+    if vis:
+        if ias is None:
+            ias = co.read_pk(ias_fn)
+        pp.visualize(clusters, ias, maxelem=maxelem)
