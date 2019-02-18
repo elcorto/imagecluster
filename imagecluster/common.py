@@ -1,5 +1,6 @@
-import numpy as np
-import re, pickle, os
+import re
+import pickle
+import os
 
 
 def read_pk(fn):
