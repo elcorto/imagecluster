@@ -1,9 +1,197 @@
 About
 =====
 
-Package for comparing and clustering images by content. We use a pre-trained
-deep convolutional neural network for calculating image fingerprints, which are
-then used to cluster similar images.
+Package for clustering images by content. We use a pre-trained deep
+convolutional neural network to calculate image fingerprints, which are then
+used to cluster similar images.
+
+Usage
+=====
+
+The package is designed as a library. Here is what you can do:
+
+.. code:: python
+
+    from imagecluster import calc as ic
+    from imagecluster import postproc as pp
+
+    # Create image database in memory. This helps to feed images to the NN model
+    # quickly.
+    ias = ic.image_arrays('pics/', size=(224,224))
+
+    # Create Keras NN model.
+    model = ic.get_model()
+
+    # Feed images through the model and extract fingerprints (feature vectors).
+    fps = ic.fingerprints(ias, model)
+
+    # Run clustering on the fingerprints.  Select clusters with similarity index
+    # sim=0.5
+    clusters = ic.cluster(fps, sim=0.5)
+
+    # Create dirs with links to images. Dirs represent the clusters the images
+    # belong to.
+    pp.make_links(clusters, 'pics/imagecluster/clusters')
+
+    # Plot images arranged in clusters.
+    pp.visualize(clusters, ias)
+
+See also ``imagecluster.main.main()``. It does the same as the code above, but
+also saves/loads the image database and the fingerprints to/from disk, such
+that you can re-run the clustering and post-processing again without
+re-calculating fingerprints.
+
+Example session:
+
+.. code:: python
+
+    >>> from imagecluster import main
+    >>> main.main('pics/', sim=0.5, vis=True)
+    no fingerprints database pics/imagecluster/fingerprints.pk found
+    create image array database pics/imagecluster/images.pk
+    pics/140301.jpg
+    pics/140601.jpg
+    pics/140101.jpg
+    pics/140400.jpg
+    pics/140801.jpg
+    [...]
+    running all images through NN model ...
+    pics/140301.jpg
+    pics/140503.jpg
+    pics/140601.jpg
+    pics/140901.jpg
+    pics/140101.jpg
+    [...]
+    clustering ...
+    #images : #clusters
+    2 : 7
+    3 : 1
+    #images in clusters total:  17
+    cluster dir: pics/imagecluster/clusters
+
+If you run this again on the same directory, only the clustering (which is very
+fast) and the post-processing (links, visualization) will be repeated.
+
+For this example, we use a very small subset of the `Holiday image dataset
+<holiday_>`_ (25 images (all named 140*.jpg) of 1491 total images in the
+dataset).
+
+Have a look at the clusters (as dirs with symlinks to the relevant files):
+
+.. code:: sh
+
+    $ tree pics/imagecluster/clusters/
+    pics/imagecluster/clusters/
+    ├── cluster_with_2
+    │   ├── cluster_0
+    │   │   ├── 140100.jpg -> /path/to/pics/140100.jpg
+    │   │   └── 140101.jpg -> /path/to/pics/140101.jpg
+    │   ├── cluster_1
+    │   │   ├── 140600.jpg -> /path/to/pics/140600.jpg
+    │   │   └── 140601.jpg -> /path/to/pics/140601.jpg
+    │   ├── cluster_2
+    │   │   ├── 140400.jpg -> /path/to/pics/140400.jpg
+    │   │   └── 140401.jpg -> /path/to/pics/140401.jpg
+    │   ├── cluster_3
+    │   │   ├── 140501.jpg -> /path/to/pics/140501.jpg
+    │   │   └── 140502.jpg -> /path/to/pics/140502.jpg
+    │   ├── cluster_4
+    │   │   ├── 140000.jpg -> /path/to/pics/140000.jpg
+    │   │   └── 140001.jpg -> /path/to/pics/140001.jpg
+    │   ├── cluster_5
+    │   │   ├── 140300.jpg -> /path/to/pics/140300.jpg
+    │   │   └── 140301.jpg -> /path/to/pics/140301.jpg
+    │   └── cluster_6
+    │       ├── 140200.jpg -> /path/to/pics/140200.jpg
+    │       └── 140201.jpg -> /path/to/pics/140201.jpg
+    └── cluster_with_3
+        └── cluster_0
+            ├── 140801.jpg -> /path/to/pics/140801.jpg
+            ├── 140802.jpg -> /path/to/pics/140802.jpg
+            └── 140803.jpg -> /path/to/pics/140803.jpg
+
+So there are some clusters with 2 images each, and one with 3 images. Lets look
+at the clusters:
+
+.. image:: doc/clusters.png
+
+Here is the result of using a larger subset of 292 images from the same dataset.
+
+.. image:: doc/clusters_many.png
+
+Methods
+=======
+
+Clustering and similarity index
+-------------------------------
+
+We use `hierarchical clustering <hc_>`_ (``calc.cluster()``), which compares
+the image fingerprints (4096-dim vectors) using a distance metric and produces
+a `dendrogram <dendro_>`_ as an intermediate result. This shows how the images
+can be grouped together depending on their similarity (y-axis).
+
+.. image:: doc/dendrogram.png
+
+
+
+One can now cut through the dendrogram tree at a certain height (``sim``
+parameter 0...1, y-axis) to create clusters of images with that level of
+similarity. ``sim=0`` is the root of the dendrogram (top in the plot) where
+there is only one node (= all images in one cluster). ``sim=1`` is equal to the
+end of the dendrogram tree (bottom in the plot), where each image is its own
+cluster. By varying the index between 0 and 1, we thus increase the number of
+clusters from 1 to the number of images. However, note that we only report
+clusters with at least 2 images, such that ``sim=1`` will in fact produce no
+results at all (unless there are completely identical images).
+
+Image fingerprints
+------------------
+
+The task of the fingerprints (feature vectors) is to represent an image's
+content (mountains, car, kitchen, person, ...). Deep convolutional neural
+networks trained on many different images have developed an internal
+representation of objects in higher layers, which we use for that purpose.
+
+To this end, we use a pre-trained NN (VGG16_ as implemented by Keras_). The
+weights will be downloaded *once* by Keras automatically upon first import and
+placed into ``~/.keras/models/``. The network was trained on ImageNet_ and is
+able to categorize images into 1000 classes (the last layer has 1000 nodes). We
+use (`thanks for the hint! <alexcnwy_>`_) the activations of the second to last
+fully connected layer ('fc2', 4096 nodes) as image fingerprints (numpy 1d array
+of shape ``(4096,)``) by default.
+
+
+Quality of clustering & parameters to tune
+------------------------------------------
+
+You may have noticed that in the example above, only 17 out of 25 images are
+put into clusters. The others are not assigned to any cluster. Technically they
+are in clusters of size 1, which we don't report by default (unless you use
+``calc.cluster(..., min_elements=0)``). One can now start to lower ``sim`` to
+find a good balance of clustering accuracy and the tolerable amount of
+dissimilarity among images within a cluster.
+
+Also, the parameters of the clustering method itself are worth tuning. ATM, we
+expose only some in ``calc.cluster()``. We tested several distance metrics and
+linkage methods, but this could nevertheless use a more elaborate evaluation.
+See ``calc.cluster()`` for "method", "metric" and "criterion" and the scipy
+functions called. If you do this and find settings which perform much better --
+PRs welcome!
+
+Additionally, some other implementations do not use any of the inner fully
+connected layers as features, but instead the output of the last pooling
+layer (layer 'flatten' in Keras' VGG16). We tested that briefly (see
+``get_model(... layer='fc2')`` or ``main(..., layer='fc2')`` and found our
+default 'fc2' to perform well enough. 'fc1' performs almost the same, while
+'flatten' seems to do worse. But again, a quantitative analysis is in order. But
+who has the time!
+
+Tests
+=====
+
+See ``imagecluster/tests/``. Use a test runner such as ``nosetests`` or
+``pytest``.
+
 
 Install
 =======
@@ -19,154 +207,15 @@ package manager)
 
     $ pip3 install -e . --no-deps
 
-Usage
-=====
-
-We use a pre-trained keras NN model. The weights will be downloaded *once* by
-keras automatically upon first import and placed into ``~/.keras/models/``.
-
-See ``imagecluster.main.main()`` for a usage example.
-
-If there is no fingerprints database, it will first run all images through the
-NN model and calculate fingerprints. Then it will cluster the images based on
-the fingerprints and a similarity index ``sim=0...1`` (more details below).
-
-Example session:
-
-.. code:: python
-
-    >>> from imagecluster import main
-    >>> main.main('/path/to/testpics/', sim=0.5)
-    no fingerprints database /path/to/testpics/imagecluster/fingerprints.pk found
-    running all images through NN model ...
-    /path/to/testpics/DSC_1061.JPG
-    /path/to/testpics/DSC_1080.JPG
-    ...
-    /path/to/testpics/DSC_1087.JPG
-    clustering ...
-    cluster dir: /path/to/testpics/imagecluster/clusters
-    cluster size : ncluster
-    2 : 7
-    3 : 2
-    4 : 4
-    5 : 1
-    10 : 1
-
-Have a look at the clusters (as dirs with symlinks to the relevant files):
-
-.. code:: sh
-
-    $ tree /path/to/testpics/imagecluster/clusters
-    /path/to/testpics/imagecluster/clusters
-    ├── cluster_with_10
-    │   └── cluster_0
-    │       ├── DSC_1068.JPG -> /path/to/testpics/DSC_1068.JPG
-    │       ├── DSC_1070.JPG -> /path/to/testpics/DSC_1070.JPG
-    │       ├── DSC_1071.JPG -> /path/to/testpics/DSC_1071.JPG
-    │       ├── DSC_1072.JPG -> /path/to/testpics/DSC_1072.JPG
-    │       ├── DSC_1073.JPG -> /path/to/testpics/DSC_1073.JPG
-    │       ├── DSC_1074.JPG -> /path/to/testpics/DSC_1074.JPG
-    │       ├── DSC_1075.JPG -> /path/to/testpics/DSC_1075.JPG
-    │       ├── DSC_1076.JPG -> /path/to/testpics/DSC_1076.JPG
-    │       ├── DSC_1077.JPG -> /path/to/testpics/DSC_1077.JPG
-    │       └── DSC_1078.JPG -> /path/to/testpics/DSC_1078.JPG
-    ├── cluster_with_2
-    │   ├── cluster_0
-    │   │   ├── DSC_1037.JPG -> /path/to/testpics/DSC_1037.JPG
-    │   │   └── DSC_1038.JPG -> /path/to/testpics/DSC_1038.JPG
-    │   ├── cluster_1
-    │   │   ├── DSC_1053.JPG -> /path/to/testpics/DSC_1053.JPG
-    │   │   └── DSC_1054.JPG -> /path/to/testpics/DSC_1054.JPG
-    │   ├── cluster_2
-    │   │   ├── DSC_1046.JPG -> /path/to/testpics/DSC_1046.JPG
-    │   │   └── DSC_1047.JPG -> /path/to/testpics/DSC_1047.JPG
-    ...
-
-If you run this again on the same directory, only the clustering will be
-repeated.
-
-Methods
-=======
-
-Clustering and similarity index
--------------------------------
-
-We use `hierarchical clustering <hc_>`_ (``imagecluster.cluster()``).
-The image fingerprints (4096-dim vectors) are compared using a distance metric
-and similar images are put together in a cluster. The threshold for what counts
-as similar is defined by a similarity index.
-
-We use the similarity index ``sim=0...1`` to define the height at which we cut
-through the `dendrogram <dendro_>`_ tree built by the hierarchical clustering.
-``sim=0`` is the root of the dendrogram where there is only one node (= all
-images in one cluster). ``sim=1`` is equal to the top of the dendrogram tree,
-where each image is its own cluster. By varying the index between 0 and 1, we
-thus increase the number of clusters from 1 to the number of images.
-
-However, note that we only report clusters with at least 2 images, such that
-``sim=1`` will in fact produce no results at all (unless there are completely
-identical images).
-
-Image fingerprints
-------------------
-
-The original goal was to have a clustering based on classification of image
-*content* such as: image A this an image of my kitchen; image B is also an
-image of my kitchen, only from a different angle and some persons in the
-foreground, but the information (this is my kitchen) is the same. This is a
-feature-detection task which relies on the ability to recognize the content of
-the scene, regardless of other scene parameters (like view angle, color, light,
-...). It turns out that we can use deep convolutional neural networks
-(convnets) for the generation of good *feature vectors*, e.g. a feature vector
-that always encodes the information "my kitchen", since deep nets, once trained
-on many different images, have developed an internal representation of objects
-like chair, boat, car .. and kitchen. Simple image hashing, which we used
-previously, is rather limited in that respect. It only does a very pedestrian
-smoothing / low-pass filtering to reduce the noise and extract the "important"
-parts of the image. This helps to find duplicates and almost-duplicates in a
-collection of photos.
-
-To this end, we use a pre-trained NN (VGG16_ as implemented by Keras_). The
-network was trained on ImageNet_ and is able to categorize images into 1000
-classes (the last layer has 1000 nodes). We chop off the last layer (`thanks
-for the hint! <alexcnwy_>`_) and use the activations of the second to last fully
-connected layer (4096 nodes) as image fingerprints (numpy 1d array of shape
-``(4096,)``).
-
-The package can detect images which are rather similar, e.g. the same scene
-photographed twice or more with some camera movement in between, or a scene
-with the same background and e.g. one person exchanged. This was also possible
-with image hashes.
-
-Now with NN-based fingerprints, we also cluster all sorts of images which have,
-e.g. mountains, tents, or beaches, so this is far better. However, if you run
-this on a large collection of images which contain images with tents or
-beaches, then the system won't recognize that certain images belong together
-because they were taken on the same trip, for instance. All tent images will be
-in one cluster, and so will all beaches images. This is probably b/c in this
-case, the human classification of the image works by looking at the background
-as well. A tent in the center of the image will always look the same, but it is
-the background which makes humans distinguish the context. The problem is:
-VGG16 and all the other popular networks have been trained on ridiculously
-small images of 224x224 size because of computational limitations, where it is
-impossible to recognize background details. Another point is that the
-background image triggers the activation of meta-information associated with
-that background in the human -- data which wasn't used when training ImageNet,
-of course. Thus, one way to improve things would be to re-train the network
-using this information. But then one would have labeled all images by hand
-again.
-
-
-Tests
-=====
-
-Run ``nosetests3`` (nosetests for Python3, Linux).
 
 Related projects
 ================
 
-https://artsexperiments.withgoogle.com/tsnemap/
-https://github.com/YaleDHLab/pix-plot
+* https://artsexperiments.withgoogle.com/tsnemap/
+* https://github.com/YaleDHLab/pix-plot
+* https://github.com/beleidy/unsupervised-image-clustering
+* https://github.com/zegami/image-similarity-clustering
+* https://github.com/sujitpal/holiday-similarity
 
 .. _VGG16: https://arxiv.org/abs/1409.1556
 .. _Keras: https://keras.io
@@ -174,3 +223,4 @@ https://github.com/YaleDHLab/pix-plot
 .. _alexcnwy: https://github.com/alexcnwy
 .. _hc: https://en.wikipedia.org/wiki/Hierarchical_clustering
 .. _dendro: https://en.wikipedia.org/wiki/Dendrogram
+.. _holiday: http://lear.inrialpes.fr/~jegou/data.php
