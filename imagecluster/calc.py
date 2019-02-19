@@ -221,7 +221,7 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean',
             else:
                 clusters[csize].append(cluster)
     if print_stats:
-        print_cluster_stats(clusters=clusters)
+        print_cluster_stats(clusters)
     if extra_out:
         extra = {'Z': Z, 'dfps': dfps, 'cluster_dct': cluster_dct, 'cut': cut}
         return clusters, extra
@@ -230,19 +230,29 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean',
 
 
 def cluster_stats(clusters):
-    return {k:len(v) for k,v in clusters.items()}
+    """Count clusters of different sizes.
+
+    Returns
+    -------
+    2d array
+        Array with column 1 = csize sorted (number of images in the cluster)
+        and column 2 = cnum (number of clusters with that size).
+
+        [[csize, cnum],
+         [...],
+        ]
+    """
+    return np.array([[k, len(clusters[k])] for k in
+                     np.sort(list(clusters.keys()))], dtype=int)
 
 
 def print_cluster_stats(clusters):
     print("#images : #clusters")
     stats = cluster_stats(clusters)
-    for csize in np.sort(list(stats.keys())):
-        print("{} : {}".format(csize, stats[csize]))
-    if len(stats) > 0:
-        nimg = np.array(list(stats.items())).prod(axis=1).sum()
+    for csize,cnum in stats:
+        print(f"{csize} : {cnum}")
+    if stats.shape[0] > 0:
+        nimg = stats.prod(axis=1).sum()
     else:
         nimg = 0
     print("#images in clusters total: ", nimg)
-
-
-

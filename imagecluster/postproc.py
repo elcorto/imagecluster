@@ -1,6 +1,5 @@
 import os
 import shutil
-from collections import OrderedDict
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -26,18 +25,13 @@ def plot_clusters(clusters, ias, max_csize=None, mem_limit=1024**3):
         have (i) enough memory, (ii) many clusters and/or (iii) large
         max(csize) and (iv) max_csize is large or None
     """
-    _stats = ic.cluster_stats(clusters)
-    csize_sorted = np.sort(list(_stats.keys()))
-    if max_csize is None:
-        max_csize = csize_sorted.max() + 1
-    # stats sorted by csize and truncated to max_csize
-    stats = {csize : _stats[csize] for csize in csize_sorted
-             if csize <= max_csize}
-    stats = OrderedDict(stats)
+    stats = ic.cluster_stats(clusters)
+    if max_csize is not None:
+        stats = stats[stats[:,0] <= max_csize, :]
     # number of clusters
-    ncols = sum(list(stats.values()))
+    ncols = stats[:,1].sum()
     # csize (number of images per cluster)
-    nrows = max(stats.keys())
+    nrows = stats[:,0].max()
     shape = ias[list(ias.keys())[0]].shape[:2]
     mem = nrows * shape[0] * ncols * shape[1] * 3
     if mem > mem_limit:
@@ -47,7 +41,7 @@ def plot_clusters(clusters, ias, max_csize=None, mem_limit=1024**3):
     # rather big arrays possible
     arr = np.ones((nrows*shape[0], ncols*shape[1], 3), dtype=np.uint8) * 255
     icol = -1
-    for csize in list(stats.keys()):
+    for csize in stats[:,0]:
         for cluster in clusters[csize]:
             icol += 1
             for irow, filename in enumerate(cluster):
