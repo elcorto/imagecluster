@@ -1,5 +1,6 @@
 import os
 import shutil
+from collections import OrderedDict
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -9,7 +10,7 @@ from . import calc as ic
 pj = os.path.join
 
 
-def plot_clusters(clusters, ias, max_csize=None):
+def plot_clusters(clusters, ias, max_csize=None, mem_limit=1024**3):
     """Plot `clusters` of images in `ias`.
 
     For interactive work, use :func:`visualize` instead.
@@ -18,24 +19,43 @@ def plot_clusters(clusters, ias, max_csize=None):
     ----------
     clusters : see :func:`imagecluster.cluster`
     ias : see :func:`imagecluster.image_arrays`
+    max_csize : int
+        plot clusters with at most this many images
+    mem_limit : float or int, bytes
+        hard memory limit for the plot array (default: 1 GiB), increase if you
+        have (i) enough memory, (ii) many clusters and/or (iii) large
+        max(csize) and (iv) max_csize is large or None
     """
-    stats = ic.cluster_stats(clusters)
+    _stats = ic.cluster_stats(clusters)
+    csize_sorted = np.sort(list(_stats.keys()))
+    if max_csize is None:
+        max_csize = csize_sorted.max() + 1
+    # stats sorted by csize and truncated to max_csize
+    stats = {csize : _stats[csize] for csize in csize_sorted
+             if csize <= max_csize}
+    stats = OrderedDict(stats)
+    # number of clusters
     ncols = sum(list(stats.values()))
+    # csize (number of images per cluster)
     nrows = max(stats.keys())
-    if max_csize is not None:
-        nrows = min(max_csize, nrows)
     shape = ias[list(ias.keys())[0]].shape[:2]
-    arr = np.ones((nrows*shape[0], ncols*shape[1], 3), dtype=int) * 255
+    mem = nrows * shape[0] * ncols * shape[1] * 3
+    if mem > mem_limit:
+        raise Exception(f"size of plot array ({mem/1024**2} MiB) > mem_limit "
+                        f"({mem_limit/1024**2} MiB)")
+    # uint8 has range 0..255, perfect for images represented as integers, makes
+    # rather big arrays possible
+    arr = np.ones((nrows*shape[0], ncols*shape[1], 3), dtype=np.uint8) * 255
     icol = -1
-    for nelem in np.sort(list(clusters.keys())):
-        for cluster in clusters[nelem]:
+    for csize in list(stats.keys()):
+        for cluster in clusters[csize]:
             icol += 1
-            for irow, filename in enumerate(cluster[:nrows]):
+            for irow, filename in enumerate(cluster):
                 img_arr = ias[filename]
-                arr[irow*shape[0]:(irow+1)*shape[0], icol*shape[1]:(icol+1)*shape[1], :] = img_arr
-    fig_scale = 1/shape[0]
-    figsize = np.array(arr.shape[:2][::-1])*fig_scale
-    fig,ax = plt.subplots(figsize=figsize)
+                arr[irow*shape[0]:(irow+1)*shape[0],
+                    icol*shape[1]:(icol+1)*shape[1], :] = img_arr
+    print(f"plot array ({arr.dtype}) size: {arr.nbytes/1024**2} MiB")
+    fig,ax = plt.subplots()
     ax.imshow(arr)
     ax.axis('off')
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
