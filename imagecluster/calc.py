@@ -69,6 +69,21 @@ def _img_worker(fn, size):
 
 
 def image_arrays(imagedir, size):
+    """Load images from `imagedir` and resize to `size`.
+
+    Parameters
+    ----------
+    imagedir : str
+    size : sequence length 2
+        (width, height), used in ``PIL.Image.open(filename).resize(size)``
+
+    Returns
+    -------
+    dict
+        {filename: 3d array (height, width, 3),
+         ...
+        }
+    """
     _f = functools.partial(_img_worker, size=size)
     with mp.Pool(mp.cpu_count()) as pool:
         ret = pool.map(_f, common.get_files(imagedir))
@@ -81,9 +96,10 @@ def fingerprint(img_arr, model):
     Parameters
     ----------
     img_arr : 3d array
-        (1,x,y) or (x,y,1), depending on keras.preprocessing.image.img_to_array
-        and "jq '.image_data_format' ~/.keras/keras.json"
-        (channels_{first,last}), see :func:`imagecluster.main.image_arrays`
+        (3,x,y) or (x,y,3), depending on
+        ``keras.preprocessing.image.img_to_array`` and ``image_data_format``
+        (``channels_{first,last}``) in ``~/.keras/keras.json``, see
+        :func:`imagecluster.main.image_arrays`
     model : keras.models.Model instance
 
     Returns

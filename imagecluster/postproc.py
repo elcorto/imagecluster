@@ -16,8 +16,8 @@ def plot_clusters(clusters, ias, max_csize=None, mem_limit=1024**3):
 
     Parameters
     ----------
-    clusters : see :func:`imagecluster.cluster`
-    ias : see :func:`imagecluster.image_arrays`
+    clusters : see :func:`calc.cluster`
+    ias : see :func:`calc.image_arrays`
     max_csize : int
         plot clusters with at most this many images
     mem_limit : float or int, bytes

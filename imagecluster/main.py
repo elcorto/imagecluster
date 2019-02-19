@@ -28,10 +28,10 @@ def main(imagedir, sim=0.5, layer='fc2', size=(224,224), links=True, vis=False,
     imagedir : str
         path to directory with images
     sim : float (0..1)
-        similarity index (see :func:`imagecluster.cluster`)
+        similarity index (see :func:`calc.cluster`)
     layer : str
         which layer to use as feature vector (see
-        :func:`imagecluster.get_model`)
+        :func:`calc.get_model`)
     size : tuple
         input image size (width, height), must match `model`, e.g. (224,224)
     links : bool
