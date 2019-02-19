@@ -1,8 +1,4 @@
 import os
-from collections import OrderedDict
-
-import numpy as np
-from sklearn.decomposition import PCA
 
 from imagecluster import calc as ic
 from imagecluster import common as co
@@ -76,12 +72,8 @@ def main(imagedir, sim=0.5, layer='fc2', size=(224,224), links=True, vis=False,
         print(f"loading fingerprints database {fps_fn} ...")
         fps = co.read_pk(fps_fn)
     if pca:
-        # Yes in recent Pythons, dicts are ordered in CPython, but still.
-        _fps = OrderedDict(fps)
-        X = np.array(list(_fps.values()))
-        Xp = PCA(**pca_params).fit(X).transform(X)
-        fps = {k:v for k,v in zip(_fps.keys(), Xp)}
-        print("pca dims:", Xp.shape[1])
+        fps = ic.pca(fps, **pca_params)
+        print("pca dims:", list(fps.values())[0].shape[0])
     print("clustering ...")
     clusters = ic.cluster(fps, sim)
     if links:

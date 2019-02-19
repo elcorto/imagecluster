@@ -2,11 +2,13 @@ import os
 
 import multiprocessing as mp
 import functools
+from collections import OrderedDict
 
 import PIL.Image
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 import numpy as np
+from sklearn.decomposition import PCA
 
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing import image
@@ -153,6 +155,16 @@ def fingerprints(ias, model):
         print(fn)
         fps[fn] = fingerprint(img_arr, model)
     return fps
+
+
+def pca(fps, n_components=0.9, **kwds):
+    if 'n_components' not in kwds.keys():
+        kwds['n_components'] = n_components
+    # Yes in recent Pythons, dicts are ordered in CPython, but still.
+    _fps = OrderedDict(fps)
+    X = np.array(list(_fps.values()))
+    Xp = PCA(**kwds).fit(X).transform(X)
+    return {k:v for k,v in zip(_fps.keys(), Xp)}
 
 
 def cluster(fps, sim=0.5, method='average', metric='euclidean',

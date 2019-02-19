@@ -25,6 +25,10 @@ The package is designed as a library. Here is what you can do:
     # Feed images through the model and extract fingerprints (feature vectors).
     fps = ic.fingerprints(ias, model)
 
+    # Optionally run a PCA on the fingerprints to compress the dimensions. Use a
+    # cumulative explained variance ratio of 0.95.
+    fps = ic.pca(fps, n_components=0.95)
+
     # Run clustering on the fingerprints.  Select clusters with similarity index
     # sim=0.5
     clusters = ic.cluster(fps, sim=0.5)
@@ -183,8 +187,15 @@ connected layers as features, but instead the output of the last pooling
 layer (layer 'flatten' in Keras' VGG16). We tested that briefly (see
 ``get_model(... layer='fc2')`` or ``main(..., layer='fc2')`` and found our
 default 'fc2' to perform well enough. 'fc1' performs almost the same, while
-'flatten' seems to do worse. But again, a quantitative analysis is in order. But
-who has the time!
+'flatten' seems to do worse. But again, a quantitative analysis is in order.
+
+PCA: Because of the `Curse of dimensionality <curse_>`_, it may be helpful to
+perform a PCA on the fingerprints before clustering to reduce the feature
+vector dimensions to, say, a few 100, thus making the distance metrics used in
+clustering more effective. However, our tests so far show no substantial change
+in clustering results, in accordance to what `others have found
+<gh_beleidy_>`_. See ``examples/example_api.py`` and ``calc.pca()``.
+
 
 Tests
 =====
@@ -224,3 +235,5 @@ Related projects
 .. _hc: https://en.wikipedia.org/wiki/Hierarchical_clustering
 .. _dendro: https://en.wikipedia.org/wiki/Dendrogram
 .. _holiday: http://lear.inrialpes.fr/~jegou/data.php
+.. _curse: https://en.wikipedia.org/wiki/Curse_of_dimensionality
+.. _gh_beleidy: https://github.com/beleidy/unsupervised-image-clustering

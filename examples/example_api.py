@@ -11,6 +11,10 @@ model = ic.get_model()
 # Feed images through the model and extract fingerprints (feature vectors).
 fps = ic.fingerprints(ias, model)
 
+# Optionally run a PCA on the fingerprints to compress the dimensions. Use a
+# cumulative explained variance ratio of 0.95.
+fps = ic.pca(fps, n_components=0.95)
+
 # Run clustering on the fingerprints.  Select clusters with similarity index
 # sim=0.5
 clusters = ic.cluster(fps, sim=0.5)
