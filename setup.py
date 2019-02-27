@@ -5,14 +5,13 @@
 #   $ python3 setup.py sdist
 #   $ twine upload dist/imagecluster-x.y.z.tar.gz
 
-import os, importlib
+import os
 from setuptools import setup
-from distutils.version import StrictVersion as Version
 
 here = os.path.abspath(os.path.dirname(__file__))
-bindir = 'bin'
 with open(os.path.join(here, 'README.rst')) as fd:
     long_description = fd.read()
+
 
 setup(
     name='imagecluster',
@@ -27,5 +26,4 @@ setup(
     keywords='image cluster vgg16 deep-learning',
     packages=['imagecluster'],
     install_requires=open('requirements.txt').read().splitlines(),
-##    scripts=['{}/{}'.format(bindir, script) for script in os.listdir(bindir)]
 )
