@@ -231,9 +231,9 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean',
     # dendrogram), plot: scipy.cluster.hierarchy.dendrogram(Z)
     Z = hierarchy.linkage(dfps, method=method, metric=metric)
     # cut dendrogram, extract clusters
-    # cut=[12,  3, 29, 14, 28, 27,...]: image cut[i] belongs to cluster i
+    # cut=[12,  3, 29, 14, 28, 27,...]: image i belongs to cluster cut[i]
     cut = hierarchy.fcluster(Z, t=dfps.max()*(1.0-sim), criterion='distance')
-    cluster_dct = dict((ii,[]) for ii in np.unique(cut))
+    cluster_dct = dict((iclus, []) for iclus in np.unique(cut))
     for iimg,iclus in enumerate(cut):
         cluster_dct[iclus].append(files[iimg])
     # group all clusters (cluster = list_of_files) of equal size together
