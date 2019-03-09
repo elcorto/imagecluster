@@ -6,6 +6,7 @@ import tempfile
 
 import numpy as np
 from matplotlib.pyplot import imsave
+import PIL.Image
 
 from imagecluster import main
 from imagecluster import calc as ic
@@ -35,11 +36,7 @@ class ImagedirCtx:
             nimg = len(arrs)
             clus = clusters.get(nimg, [])
             for idx, arr in enumerate(arrs):
-                # Despite its docs, pyplot.imsave() writes an RGBA (x,y,4)
-                # image when passed a (x,y,3) array in case of PNG files, so
-                # write a JPG here. Need to fix
-                # https://github.com/elcorto/imagecluster/issues/5
-                fn = pj(imagedir, f'image_{color}_{idx}.jpg')
+                fn = pj(imagedir, f'image_{color}_{idx}.png')
                 imsave(fn, arr)
                 image_fns.append(fn)
                 clus.append(fn)
@@ -86,3 +83,29 @@ def test_cluster():
             for val_clus, ref_clus in zip(clusters[nimg], ctx.clusters[nimg]):
                 msg = f"ref_clus: {ref_clus}, val_clus: {val_clus}"
                 assert set(ref_clus) == set(val_clus), msg
+
+
+def test_png_rgba_io():
+    fn = tempfile.mktemp(prefix='imagecluster_') + '.png'
+    try:
+        shape2d = (123,456)
+        shape = shape2d + (3,)
+        rgb = (np.random.rand(*shape) * 255).astype(np.uint8)
+        alpha1 = np.ones(shape2d, dtype=np.uint8) * 255 # white
+        alpha2 = np.zeros(shape2d, dtype=np.uint8) # black
+        alpha3 = (np.random.rand(*shape2d) * 255).astype(np.uint8) # noise
+        for alpha in [alpha1, alpha2, alpha3]:
+            rgba = np.empty(shape2d + (4,), dtype=np.uint8)
+            rgba[..., :3] = rgb
+            rgba[..., 3] = alpha
+            assert rgba.max() <= 255
+            imsave(fn, rgba)
+            img = PIL.Image.open(fn)
+            assert img.mode == 'RGBA', img.mode
+            assert img.format == 'PNG', img.format
+            rgb2 = np.array(ic.load_img_rgb(fn))
+            assert (rgb == rgb2).all()
+            assert rgb.dtype == rgb2.dtype
+    finally:
+        if os.path.exists(fn):
+            os.remove(fn)

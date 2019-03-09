@@ -51,6 +51,9 @@ def get_model(layer='fc2'):
     return model
 
 
+def load_img_rgb(fn):
+    return PIL.Image.open(fn).convert('RGB')
+
 # keras.preprocessing.image.load_img() uses img.rezize(shape) with the default
 # interpolation of PIL.Image.resize() which is pretty bad (see
 # imagecluster/play/pil_resample_methods.py). Given that we are restricted to
@@ -64,7 +67,7 @@ def get_model(layer='fc2'):
 ##... = image.img_to_array(img)
 def _img_worker(fn, size):
     print(fn)
-    return fn, image.img_to_array(PIL.Image.open(fn).resize(size, 3),
+    return fn, image.img_to_array(load_img_rgb(fn).resize(size, 3),
                                   dtype=int)
 
 
