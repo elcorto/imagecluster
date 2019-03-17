@@ -219,6 +219,13 @@ package manager)
     $ pip3 install -e . --no-deps
 
 
+Contributions
+=============
+
+Contributions are welcome. To streamline the git log, consider using one of
+the prefixes mentioned `here <commit_pfx_>`_ in your commit message.
+
+
 Related projects
 ================
 
@@ -227,6 +234,7 @@ Related projects
 * https://github.com/beleidy/unsupervised-image-clustering
 * https://github.com/zegami/image-similarity-clustering
 * https://github.com/sujitpal/holiday-similarity
+
 
 .. _VGG16: https://arxiv.org/abs/1409.1556
 .. _Keras: https://keras.io
@@ -237,3 +245,4 @@ Related projects
 .. _holiday: http://lear.inrialpes.fr/~jegou/data.php
 .. _curse: https://en.wikipedia.org/wiki/Curse_of_dimensionality
 .. _gh_beleidy: https://github.com/beleidy/unsupervised-image-clustering
+.. _commit_pfx: https://github.com/elcorto/libstuff/blob/master/commit_prefixes
