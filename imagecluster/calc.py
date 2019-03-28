@@ -4,7 +4,7 @@ import multiprocessing as mp
 import functools
 from collections import OrderedDict
 
-import PIL.Image
+from PIL import Image
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 import numpy as np
@@ -16,7 +16,9 @@ from keras.models import Model
 
 from . import common
 
+
 pj = os.path.join
+
 
 
 def get_model(layer='fc2'):
@@ -52,10 +54,11 @@ def get_model(layer='fc2'):
 
 
 def load_img_rgb(fn):
-    return PIL.Image.open(fn).convert('RGB')
+    return Image.open(fn).convert('RGB')
+
 
 # keras.preprocessing.image.load_img() uses img.rezize(shape) with the default
-# interpolation of PIL.Image.resize() which is pretty bad (see
+# interpolation of Image.resize() which is pretty bad (see
 # imagecluster/play/pil_resample_methods.py). Given that we are restricted to
 # small inputs of 224x224 by the VGG network, we should do our best to keep as
 # much information from the original image as possible. This is a gut feeling,
@@ -66,19 +69,34 @@ def load_img_rgb(fn):
 ##img = image.load_img(fn, target_size=size)
 ##... = image.img_to_array(img)
 def _img_worker(fn, size):
-    print(fn)
-    return fn, image.img_to_array(load_img_rgb(fn).resize(size, 3),
-                                  dtype=int)
+    # Handle PIL error "OSError: broken data stream when reading image file".
+    # See https://github.com/python-pillow/Pillow/issues/1510 . We have this
+    # issue with smartphone panorama JPG files. But instead of bluntly setting
+    # ImageFile.LOAD_TRUNCATED_IMAGES = True and hoping for the best (is the
+    # image read, and till the end?), we catch the OSError thrown by PIL and
+    # ignore the file completely. This is better than reading potentially
+    # undefined data and process it. A more specialized exception from PILs
+    # side would be good, but let's hope that an OSError doesn't cover too much
+    # ground when reading data from disk :-)
+    try:
+        print(fn)
+        return fn, image.img_to_array(load_img_rgb(fn).resize(size, 3),
+                                      dtype=int)
+    except OSError as ex:
+        print(f"skipping {fn}: {ex}")
+        return fn, None
 
 
-def image_arrays(imagedir, size):
+def image_arrays(imagedir, size, ncores=mp.cpu_count()):
     """Load images from `imagedir` and resize to `size`.
 
     Parameters
     ----------
     imagedir : str
     size : sequence length 2
-        (width, height), used in ``PIL.Image.open(filename).resize(size)``
+        (width, height), used in ``Image.open(filename).resize(size)``
+    ncores : int
+        run that many parallel processes
 
     Returns
     -------
@@ -88,9 +106,9 @@ def image_arrays(imagedir, size):
         }
     """
     _f = functools.partial(_img_worker, size=size)
-    with mp.Pool(mp.cpu_count()) as pool:
+    with mp.Pool(ncores) as pool:
         ret = pool.map(_f, common.get_files(imagedir))
-    return dict(ret)
+    return {k: v for k,v in ret if v is not None}
 
 
 def fingerprint(img_arr, model):
