@@ -1,5 +1,6 @@
 import os
 import shutil
+import functools
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -9,15 +10,15 @@ from . import calc as ic
 pj = os.path.join
 
 
-def plot_clusters(clusters, ias, max_csize=None, mem_limit=1024**3):
-    """Plot `clusters` of images in `ias`.
+def plot_clusters(clusters, image_arrays, max_csize=None, mem_limit=1024**3):
+    """Plot `clusters` of images in `image_arrays`.
 
     For interactive work, use :func:`visualize` instead.
 
     Parameters
     ----------
     clusters : see :func:`calc.cluster`
-    ias : see :func:`calc.image_arrays`
+    image_arrays : see :func:`calc.image_arrays`
     max_csize : int
         plot clusters with at most this many images
     mem_limit : float or int, bytes
@@ -32,7 +33,7 @@ def plot_clusters(clusters, ias, max_csize=None, mem_limit=1024**3):
     ncols = stats[:,1].sum()
     # csize (number of images per cluster)
     nrows = stats[:,0].max()
-    shape = ias[list(ias.keys())[0]].shape[:2]
+    shape = image_arrays[list(image_arrays.keys())[0]].shape[:2]
     mem = nrows * shape[0] * ncols * shape[1] * 3
     if mem > mem_limit:
         raise Exception(f"size of plot array ({mem/1024**2} MiB) > mem_limit "
@@ -45,7 +46,7 @@ def plot_clusters(clusters, ias, max_csize=None, mem_limit=1024**3):
         for cluster in clusters[csize]:
             icol += 1
             for irow, filename in enumerate(cluster):
-                img_arr = ias[filename]
+                img_arr = image_arrays[filename]
                 arr[irow*shape[0]:(irow+1)*shape[0],
                     icol*shape[1]:(icol+1)*shape[1], :] = img_arr
     print(f"plot array ({arr.dtype}) size: {arr.nbytes/1024**2} MiB")
@@ -56,6 +57,7 @@ def plot_clusters(clusters, ias, max_csize=None, mem_limit=1024**3):
     return fig,ax
 
 
+@functools.wraps(plot_clusters)
 def visualize(*args, **kwds):
     plot_clusters(*args, **kwds)
     plt.show()

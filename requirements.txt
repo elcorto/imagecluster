@@ -4,3 +4,4 @@ keras
 Pillow
 scikit-learn
 matplotlib
+piexif

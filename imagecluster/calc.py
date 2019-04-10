@@ -1,24 +1,16 @@
 import os
-
-import multiprocessing as mp
-import functools
 from collections import OrderedDict
 
-from PIL import Image
+import numpy as np
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
-import numpy as np
 from sklearn.decomposition import PCA
 
 from keras.applications.vgg16 import VGG16, preprocess_input
-from keras.preprocessing import image
 from keras.models import Model
-
-from . import common
 
 
 pj = os.path.join
-
 
 
 def get_model(layer='fc2'):
@@ -51,64 +43,6 @@ def get_model(layer='fc2'):
     model = Model(inputs=base_model.input,
                   outputs=base_model.get_layer(layer).output)
     return model
-
-
-def load_img_rgb(fn):
-    return Image.open(fn).convert('RGB')
-
-
-# keras.preprocessing.image.load_img() uses img.rezize(shape) with the default
-# interpolation of Image.resize() which is pretty bad (see
-# imagecluster/play/pil_resample_methods.py). Given that we are restricted to
-# small inputs of 224x224 by the VGG network, we should do our best to keep as
-# much information from the original image as possible. This is a gut feeling,
-# untested. But given that model.predict() is 10x slower than PIL image loading
-# and resizing .. who cares.
-#
-# (224, 224, 3)
-##img = image.load_img(fn, target_size=size)
-##... = image.img_to_array(img)
-def _img_worker(fn, size):
-    # Handle PIL error "OSError: broken data stream when reading image file".
-    # See https://github.com/python-pillow/Pillow/issues/1510 . We have this
-    # issue with smartphone panorama JPG files. But instead of bluntly setting
-    # ImageFile.LOAD_TRUNCATED_IMAGES = True and hoping for the best (is the
-    # image read, and till the end?), we catch the OSError thrown by PIL and
-    # ignore the file completely. This is better than reading potentially
-    # undefined data and process it. A more specialized exception from PILs
-    # side would be good, but let's hope that an OSError doesn't cover too much
-    # ground when reading data from disk :-)
-    try:
-        print(fn)
-        return fn, image.img_to_array(load_img_rgb(fn).resize(size, 3),
-                                      dtype=int)
-    except OSError as ex:
-        print(f"skipping {fn}: {ex}")
-        return fn, None
-
-
-def image_arrays(imagedir, size, ncores=mp.cpu_count()):
-    """Load images from `imagedir` and resize to `size`.
-
-    Parameters
-    ----------
-    imagedir : str
-    size : sequence length 2
-        (width, height), used in ``Image.open(filename).resize(size)``
-    ncores : int
-        run that many parallel processes
-
-    Returns
-    -------
-    dict
-        {filename: 3d array (height, width, 3),
-         ...
-        }
-    """
-    _f = functools.partial(_img_worker, size=size)
-    with mp.Pool(ncores) as pool:
-        ret = pool.map(_f, common.get_files(imagedir))
-    return {k: v for k,v in ret if v is not None}
 
 
 def fingerprint(img_arr, model):
@@ -165,18 +99,18 @@ def fingerprint(img_arr, model):
 ##    return fn, fingerprint(img_arr, model)
 ##
 ##
-##def fingerprints(ias, model):
+##def fingerprints(image_arrays, model):
 ##    _f = functools.partial(_worker, model=model)
 ##    with mp.Pool(int(mp.cpu_count()/2)) as pool:
-##        ret = pool.map(_f, ias.items())
+##        ret = pool.map(_f, image_arrays.items())
 ##    return dict(ret)
 
-def fingerprints(ias, model):
-    """Calculate fingerprints for all image arrays in `ias`.
+def fingerprints(image_arrays, model):
+    """Calculate fingerprints for all image arrays in `image_arrays`.
 
     Parameters
     ----------
-    ias : see :func:`image_arrays`
+    image_arrays : see :func:`~io.image_arrays`
     model : see :func:`fingerprint`
 
     Returns
@@ -187,33 +121,38 @@ def fingerprints(ias, model):
          ...
          }
     """
-    fps = {}
-    for fn,img_arr in ias.items():
+    fingerprints = {}
+    for fn,img_arr in image_arrays.items():
         print(fn)
-        fps[fn] = fingerprint(img_arr, model)
-    return fps
+        fingerprints[fn] = fingerprint(img_arr, model)
+    return fingerprints
 
 
-def pca(fps, n_components=0.9, **kwds):
+def pca(fingerprints, n_components=0.9, **kwds):
     if 'n_components' not in kwds.keys():
         kwds['n_components'] = n_components
     # Yes in recent Pythons, dicts are ordered in CPython, but still.
-    _fps = OrderedDict(fps)
-    X = np.array(list(_fps.values()))
+    _fingerprints = OrderedDict(fingerprints)
+    X = np.array(list(_fingerprints.values()))
     Xp = PCA(**kwds).fit(X).transform(X)
-    return {k:v for k,v in zip(_fps.keys(), Xp)}
+    return {k:v for k,v in zip(_fingerprints.keys(), Xp)}
 
 
-def cluster(fps, sim=0.5, method='average', metric='euclidean',
-            extra_out=False, print_stats=True, min_csize=2):
+def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
+            metric='euclidean', extra_out=False, print_stats=True, min_csize=2):
     """Hierarchical clustering of images based on image fingerprints.
 
     Parameters
     ----------
-    fps: dict
+    fingerprints: dict
         output of :func:`fingerprints`
     sim : float 0..1
         similarity index
+    timestamps: dict
+        output of :func:`~imagecluster.io.load_timestamps`
+    alpha : float
+        mixing parameter of image content distance and time distance, ignored
+        if timestamps is None
     method : see scipy.hierarchy.linkage(), all except 'centroid' produce
         pretty much the same result
     metric : see scipy.hierarchy.linkage(), make sure to use 'euclidean' in
@@ -240,14 +179,30 @@ def cluster(fps, sim=0.5, method='average', metric='euclidean',
         if `extra_out` is True
     """
     assert 0 <= sim <= 1, "sim not 0..1"
+    assert 0 <= alpha <= 1, "alpha not 0..1"
     assert min_csize >= 1, "min_csize must be >= 1"
-    files = list(fps.keys())
+    files = list(fingerprints.keys())
     # array(list(...)): 2d array
     #   [[... fingerprint of image1 (4096,) ...],
     #    [... fingerprint of image2 (4096,) ...],
     #    ...
     #    ]
-    dfps = distance.pdist(np.array(list(fps.values())), metric)
+    dfps = distance.pdist(np.array(list(fingerprints.values())), metric)
+    if timestamps is not None:
+        # Sanity error check as long as we don't have a single data struct to
+        # keep fingerprints and timestamps, as well as image data. This is not
+        # pretty, but at least a safety hook.
+        set_files = set(files)
+        set_tsfiles = set(timestamps.keys())
+        set_diff = set_files.symmetric_difference(set_tsfiles)
+        assert len(set_diff) == 0, (f"files in fingerprints and timestamps do "
+                                    f"not match: diff={set_diff}")
+        # use 'files' to make sure we have the same order as in 'fingerprints'
+        tsarr = np.array([timestamps[k] for k in files])[:,None]
+        dts = distance.pdist(tsarr, metric)
+        dts = dts / dts.max()
+        dfps = dfps / dfps.max()
+        dfps = dfps * (1 - alpha) + dts * alpha
     # hierarchical/agglomerative clustering (Z = linkage matrix, construct
     # dendrogram), plot: scipy.cluster.hierarchy.dendrogram(Z)
     Z = hierarchy.linkage(dfps, method=method, metric=metric)

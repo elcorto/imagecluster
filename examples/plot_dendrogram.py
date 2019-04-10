@@ -1,19 +1,20 @@
+#!/usr/bin/python3
+
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy.cluster.hierarchy import dendrogram
 
 from imagecluster import calc as ic
+from imagecluster import io as icio
 
-ias = ic.image_arrays('pics/', size=(224,224))
+image_arrays = icio.read_image_arrays('pics/', size=(224,224))
 model = ic.get_model()
-fps = ic.fingerprints(ias, model)
-clusters,extra = ic.cluster(fps, sim=0.5, extra_out=True)
+fingerprints = ic.fingerprints(image_arrays, model)
+clusters,extra = ic.cluster(fingerprints, sim=0.5, extra_out=True)
 
 # linkage matrix Z
-Z = extra['Z']
-
 fig,ax = plt.subplots()
-dendrogram(Z, ax=ax)
+dendrogram(extra['Z'], ax=ax)
 
 # Adjust yaxis labels (values from Z[:,2]) to our definition of the `sim`
 # parameter.

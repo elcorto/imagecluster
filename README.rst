@@ -2,83 +2,23 @@ About
 =====
 
 Package for clustering images by content. We use a pre-trained deep
-convolutional neural network to calculate image fingerprints, which are then
-used to cluster similar images.
+convolutional neural network to calculate image fingerprints which represent
+content. Those are used to cluster similar images. In addition to pure
+image content, it is possible to mix in timestamp information which improves
+clustering for temporally uncorrelated images.
 
 Usage
 =====
 
-The package is designed as a library. Here is what you can do:
+The package is designed as a library. See ``examples/example_api.py``.
 
-.. code:: python
+.. Here is what you can do:
 
-    from imagecluster import calc as ic
-    from imagecluster import postproc as pp
+.. .. code:: python
+.. example_api.py
 
-    # Create image database in memory. This helps to feed images to the NN model
-    # quickly.
-    ias = ic.image_arrays('pics/', size=(224,224))
-
-    # Create Keras NN model.
-    model = ic.get_model()
-
-    # Feed images through the model and extract fingerprints (feature vectors).
-    fps = ic.fingerprints(ias, model)
-
-    # Optionally run a PCA on the fingerprints to compress the dimensions. Use a
-    # cumulative explained variance ratio of 0.95.
-    fps = ic.pca(fps, n_components=0.95)
-
-    # Run clustering on the fingerprints.  Select clusters with similarity index
-    # sim=0.5
-    clusters = ic.cluster(fps, sim=0.5)
-
-    # Create dirs with links to images. Dirs represent the clusters the images
-    # belong to.
-    pp.make_links(clusters, 'pics/imagecluster/clusters')
-
-    # Plot images arranged in clusters.
-    pp.visualize(clusters, ias)
-
-See also ``imagecluster.main.main()``. It does the same as the code above, but
-also saves/loads the image database and the fingerprints to/from disk, such
-that you can re-run the clustering and post-processing again without
-re-calculating fingerprints.
-
-Example session:
-
-.. code:: python
-
-    >>> from imagecluster import main
-    >>> main.main('pics/', sim=0.5, vis=True)
-    no fingerprints database pics/imagecluster/fingerprints.pk found
-    create image array database pics/imagecluster/images.pk
-    pics/140301.jpg
-    pics/140601.jpg
-    pics/140101.jpg
-    pics/140400.jpg
-    pics/140801.jpg
-    [...]
-    running all images through NN model ...
-    pics/140301.jpg
-    pics/140503.jpg
-    pics/140601.jpg
-    pics/140901.jpg
-    pics/140101.jpg
-    [...]
-    clustering ...
-    #images : #clusters
-    2 : 7
-    3 : 1
-    #images in clusters total:  17
-    cluster dir: pics/imagecluster/clusters
-
-If you run this again on the same directory, only the clustering (which is very
-fast) and the post-processing (links, visualization) will be repeated.
-
-For this example, we use a very small subset of the `Holiday image dataset
-<holiday_>`_ (25 images (all named 140*.jpg) of 1491 total images in the
-dataset).
+The bottleneck is ``~imagecluster.calc.fingerprints``, all other
+operations have negligible relative cost.
 
 Have a look at the clusters (as dirs with symlinks to the relevant files):
 
@@ -119,7 +59,16 @@ at the clusters:
 
 .. image:: doc/clusters.png
 
-Here is the result of using a larger subset of 292 images from the same dataset.
+For this example, we use a very small subset of the `Holiday image dataset
+<holiday_>`_ (25 images (all named 140*.jpg) of 1491 total images in the
+dataset). See ``examples/inria_holiday.sh`` for how to select such a subset:
+
+.. code:: sh
+
+    $ /path/to/imagecluster/examples/inria_holiday.sh jpg/140*
+
+Here is the result of using a larger subset of 292 images from the same dataset
+(``/inria_holiday.sh jpg/14*``):
 
 .. image:: doc/clusters_many.png
 
@@ -135,8 +84,6 @@ a `dendrogram <dendro_>`_ as an intermediate result. This shows how the images
 can be grouped together depending on their similarity (y-axis).
 
 .. image:: doc/dendrogram.png
-
-
 
 One can now cut through the dendrogram tree at a certain height (``sim``
 parameter 0...1, y-axis) to create clusters of images with that level of
@@ -163,6 +110,28 @@ able to categorize images into 1000 classes (the last layer has 1000 nodes). We
 use (`thanks for the hint! <alexcnwy_>`_) the activations of the second to last
 fully connected layer ('fc2', 4096 nodes) as image fingerprints (numpy 1d array
 of shape ``(4096,)``) by default.
+
+Content and time distance
+-------------------------
+
+Image fingerprints represent content. Clustering based on content ignores time
+correlations. Say we have two images of some object that look similar and will
+thus be put into the same cluster. However, they might be in fact pictures of
+different objects, taken at different times -- which is our original holiday
+image use case (e.g. two images of a church from different cities, taken on
+separate trips). In this case, we want the images to end up in different
+clusters. We have a feature to mix content distance (``d_c`` and time distance
+``d_t``) such that
+
+::
+
+    d = (1 - alpha) * d_c * ahpha * d_t
+
+One can thus do pure content-based clustering (``alpha=0``) or pure time-based
+(``alpha=1``). The effect of the mixing is that fingerprint points representing
+content get pushed further apart when the corresponding images' time distance
+is large. That way, we achieve a transparent addition of time information w/o
+changing the clustering method.
 
 
 Quality of clustering & parameters to tune
@@ -211,13 +180,7 @@ Install
 
     $ pip3 install -e .
 
-or if you have the ``requirements.txt`` already installed (e.g. by your system's
-package manager)
-
-.. code:: sh
-
-    $ pip3 install -e . --no-deps
-
+See also samplepkg_.
 
 Contributions
 =============
@@ -246,3 +209,4 @@ Related projects
 .. _curse: https://en.wikipedia.org/wiki/Curse_of_dimensionality
 .. _gh_beleidy: https://github.com/beleidy/unsupervised-image-clustering
 .. _commit_pfx: https://github.com/elcorto/libstuff/blob/master/commit_prefixes
+.. _samplepkg: https://github.com/elcorto/samplepkg
