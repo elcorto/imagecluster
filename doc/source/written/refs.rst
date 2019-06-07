@@ -1,0 +1,11 @@
+.. _VGG16: https://arxiv.org/abs/1409.1556
+.. _Keras: https://keras.io
+.. _ImageNet: http://www.image-net.org/
+.. _alexcnwy: https://github.com/alexcnwy
+.. _hc: https://en.wikipedia.org/wiki/Hierarchical_clustering
+.. _dendro: https://en.wikipedia.org/wiki/Dendrogram
+.. _holiday: http://lear.inrialpes.fr/~jegou/data.php
+.. _curse: https://en.wikipedia.org/wiki/Curse_of_dimensionality
+.. _gh_beleidy: https://github.com/beleidy/unsupervised-image-clustering
+.. _commit_pfx: https://github.com/elcorto/libstuff/blob/master/commit_prefixes.rst
+.. _samplepkg: https://github.com/elcorto/samplepkg

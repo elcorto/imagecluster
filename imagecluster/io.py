@@ -17,23 +17,53 @@ ic_base_dir = 'imagecluster'
 
 
 def read_pk(filename):
+    """Read pickled data from `filename`."""
     with open(filename, 'rb') as fd:
         ret = pickle.load(fd)
     return ret
 
 
 def write_pk(obj, filename):
+    """Write object `obj` pickled to `filename`."""
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'wb') as fd:
         pickle.dump(obj, fd)
 
 
-def get_files(dr, ext='jpg|jpeg|bmp|png'):
+def get_files(imagedir, ext='jpg|jpeg|bmp|png'):
+    """Return all file names with extension matching the regex `ext` from dir
+    `imagedir`.
+
+    Parameters
+    ----------
+    imagedir : str
+    ext : str
+        regex
+
+    Returns
+    -------
+    list
+        list of file names
+    """
     rex = re.compile(r'^.*\.({})$'.format(ext), re.I)
-    return [os.path.join(dr,base) for base in os.listdir(dr) if rex.match(base)]
+    return [os.path.join(imagedir,base) for base in os.listdir(imagedir)
+            if rex.match(base)]
 
 
 def exif_timestamp(filename):
+    """Read timestamp from image in `filename` from EXIF tag.
+
+    This will probably work for most JPG files, but not for PNG, for instance.
+
+    Raises
+    ------
+    exceptions.ICExifReadError
+
+    Returns
+    -------
+    float
+        timestamp, seconds since Epoch
+    """
     # PIL lazy-loads the image data, so this open and _getexif() is fast.
     img = PIL.Image.open(filename)
     if ('exif' not in img.info.keys()) or (not hasattr(img, '_getexif')):
@@ -60,10 +90,25 @@ def exif_timestamp(filename):
 
 
 def stat_timestamp(filename):
+    """File timestamp from file stats (mtime)."""
     return os.stat(filename).st_mtime
 
 
 def timestamp(filename, source='auto'):
+    """Read single timestamp for image in `filename`.
+
+    Parameters
+    ----------
+    filename : str
+    source : {'auto', 'stat', 'exif'}
+        Read timestamps from file stats ('stat'), or EXIF tags ('exif'). If
+        'auto', then try 'exif' first.
+
+    Returns
+    -------
+    float
+        timestamp, seconds since Epoch
+    """
     if source == 'auto':
         try:
             return exif_timestamp(filename)
@@ -117,7 +162,8 @@ def _timestamp_worker(filename, source):
         print(f"skipping {filename}: {ex}")
         return filename, None
 
-
+# XXX nomenclature: Change image_arrays -> images, same as fingerprints then,
+# simpler ...
 def read_image_arrays(imagedir, size, ncores=mp.cpu_count()):
     """Load images from `imagedir` and resize to `size`.
 
@@ -141,6 +187,20 @@ def read_image_arrays(imagedir, size, ncores=mp.cpu_count()):
 
 
 def read_timestamps(imagedir, source='auto', ncores=mp.cpu_count()):
+    """Read timestamps of all images in `imagedir`.
+
+    Parameters
+    ----------
+    imagedir : str
+    source : see :func:`~imagecluster.io.timestamp`
+    ncores : int
+        run that many parallel processes
+
+    Returns
+    -------
+    dict
+        {filename: timestamp (int, seconds since Epoch)}
+    """
     _f = functools.partial(_timestamp_worker, source=source)
     with mp.Pool(ncores) as pool:
         ret = pool.map(_f, get_files(imagedir))
@@ -153,7 +213,35 @@ def read_timestamps(imagedir, source='auto', ncores=mp.cpu_count()):
 def get_image_data(imagedir, model_kwds=dict(layer='fc2'),
                    img_kwds=dict(size=(224,224)), timestamps_kwds=dict(source='auto'),
                    pca_kwds=None):
-    """Return all image data needed for clustering."""
+    """Convenience function to create `image_arrays`, `fingerprints`,
+    `timestamps`.
+
+    It checks for existing `image_arrays` and `fingerprints` database files on
+    disk and load them if present. Running this again only loads data from
+    disk, which is fast. Default locations::
+
+       fingerprints: <imagedir>/imagecluster/fingerprints.pk
+       image_arrays: <imagedir>/imagecluster/images.pk
+
+    Parameters
+    ----------
+    imagedir : str
+    model_kwds : dict
+        passed to :func:`~imagecluster.calc.get_model`
+    img_kwds : dict
+        passed to :func:`~imagecluster.io.read_image_arrays`
+    timestamps_kwds : dict
+        passed to :func:`~imagecluster.io.read_timestamps`
+    pca_kwds : dict
+        passed to :func:`~imagecluster.calc.pca`, PCA is skipped if
+        ``pca_kwds=None``
+
+    Returns
+    -------
+    image_arrays : see :func:`~imagecluster.io.read_image_arrays`
+    fingerprints : see :func:`~imagecluster.calc.fingerprints`
+    timestamps : see :func:`~imagecluster.io.read_timestamps`
+    """
     fingerprints_fn = pj(imagedir, ic_base_dir, 'fingerprints.pk')
     image_arrays_fn = pj(imagedir, ic_base_dir, 'images.pk')
     if os.path.exists(image_arrays_fn):

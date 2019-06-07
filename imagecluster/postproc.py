@@ -17,8 +17,8 @@ def plot_clusters(clusters, image_arrays, max_csize=None, mem_limit=1024**3):
 
     Parameters
     ----------
-    clusters : see :func:`calc.cluster`
-    image_arrays : see :func:`calc.image_arrays`
+    clusters : see :func:`~imagecluster.calc.cluster`
+    image_arrays : see :func:`~imagecluster.io.read_image_arrays`
     max_csize : int
         plot clusters with at most this many images
     mem_limit : float or int, bytes
@@ -57,13 +57,24 @@ def plot_clusters(clusters, image_arrays, max_csize=None, mem_limit=1024**3):
     return fig,ax
 
 
-@functools.wraps(plot_clusters)
 def visualize(*args, **kwds):
+    """Interactive wrapper of :func:`plot_clusters`. Just calls ``plt.show`` at
+    the end. Doesn't return ``fig,ax``.
+    """
     plot_clusters(*args, **kwds)
     plt.show()
 
 
 def make_links(clusters, cluster_dr):
+    """In `cluster_dr`, create nested dirs with symlinks to image files
+    representing `clusters`.
+
+    Parameters
+    ----------
+    clusters : see :func:`~imagecluster.calc.cluster`
+    cluster_dr : str
+        path
+    """
     print("cluster dir: {}".format(cluster_dr))
     if os.path.exists(cluster_dr):
         shutil.rmtree(cluster_dr)

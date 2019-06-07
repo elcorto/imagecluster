@@ -24,21 +24,25 @@ def get_model(layer='fc2'):
     layer : str
         which layer to extract (must be of shape (None, X)), e.g. 'fc2', 'fc1'
         or 'flatten'
+
+    Notes
+    -----
+    ::
+
+        base_model.summary()
+            ....
+            block5_conv4 (Conv2D)        (None, 15, 15, 512)       2359808
+            _________________________________________________________________
+            block5_pool (MaxPooling2D)   (None, 7, 7, 512)         0
+            _________________________________________________________________
+            flatten (Flatten)            (None, 25088)             0
+            _________________________________________________________________
+            fc1 (Dense)                  (None, 4096)              102764544
+            _________________________________________________________________
+            fc2 (Dense)                  (None, 4096)              16781312
+            _________________________________________________________________
+            predictions (Dense)          (None, 1000)              4097000
     """
-    # base_model.summary():
-    #     ....
-    #     block5_conv4 (Conv2D)        (None, 15, 15, 512)       2359808
-    #     _________________________________________________________________
-    #     block5_pool (MaxPooling2D)   (None, 7, 7, 512)         0
-    #     _________________________________________________________________
-    #     flatten (Flatten)            (None, 25088)             0
-    #     _________________________________________________________________
-    #     fc1 (Dense)                  (None, 4096)              102764544
-    #     _________________________________________________________________
-    #     fc2 (Dense)                  (None, 4096)              16781312
-    #     _________________________________________________________________
-    #     predictions (Dense)          (None, 1000)              4097000
-    #
     base_model = VGG16(weights='imagenet', include_top=True)
     model = Model(inputs=base_model.input,
                   outputs=base_model.get_layer(layer).output)
@@ -46,7 +50,7 @@ def get_model(layer='fc2'):
 
 
 def fingerprint(img_arr, model):
-    """Run image array (3d array) run through `model` (keras.models.Model).
+    """Run image array (3d array) run through `model` (``keras.models.Model``).
 
     Parameters
     ----------
@@ -54,8 +58,8 @@ def fingerprint(img_arr, model):
         (3,x,y) or (x,y,3), depending on
         ``keras.preprocessing.image.img_to_array`` and ``image_data_format``
         (``channels_{first,last}``) in ``~/.keras/keras.json``, see
-        :func:`imagecluster.main.image_arrays`
-    model : keras.models.Model instance
+        :func:`~imagecluster.io.read_image_arrays`
+    model : ``keras.models.Model`` instance
 
     Returns
     -------
@@ -110,7 +114,7 @@ def fingerprints(image_arrays, model):
 
     Parameters
     ----------
-    image_arrays : see :func:`~io.image_arrays`
+    image_arrays : see :func:`~imagecluster.io.read_image_arrays`
     model : see :func:`fingerprint`
 
     Returns
@@ -129,6 +133,19 @@ def fingerprints(image_arrays, model):
 
 
 def pca(fingerprints, n_components=0.9, **kwds):
+    """PCA of fingerprints for dimensionality reduction.
+
+    Parameters
+    ----------
+    fingerprints : see :func:`fingerprints`
+    n_components, kwds : passed to :class:`sklearn.decomposition.PCA`
+
+    Returns
+    -------
+    dict
+        same format as in :func:`fingerprints`, compressed fingerprints, so
+        hopefully lower dim 1d arrays
+    """
     if 'n_components' not in kwds.keys():
         kwds['n_components'] = n_components
     # Yes in recent Pythons, dicts are ordered in CPython, but still.
@@ -140,7 +157,8 @@ def pca(fingerprints, n_components=0.9, **kwds):
 
 def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
             metric='euclidean', extra_out=False, print_stats=True, min_csize=2):
-    """Hierarchical clustering of images based on image fingerprints.
+    """Hierarchical clustering of images based on image fingerprints,
+    optionally scaled by time distance (`alpha`).
 
     Parameters
     ----------
@@ -149,14 +167,14 @@ def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
     sim : float 0..1
         similarity index
     timestamps: dict
-        output of :func:`~imagecluster.io.load_timestamps`
+        output of :func:`~imagecluster.io.read_timestamps`
     alpha : float
         mixing parameter of image content distance and time distance, ignored
         if timestamps is None
-    method : see scipy.hierarchy.linkage(), all except 'centroid' produce
+    method : see :func:`scipy.cluster.hierarchy.linkage`, all except 'centroid' produce
         pretty much the same result
-    metric : see scipy.hierarchy.linkage(), make sure to use 'euclidean' in
-        case of method='centroid', 'median' or 'ward'
+    metric : see :func:`scipy.cluster.hierarchy.linkage`, make sure to use
+        'euclidean' in case of method='centroid', 'median' or 'ward'
     extra_out : bool
         additionally return internal variables for debugging
     print_stats : bool
@@ -168,13 +186,17 @@ def cluster(fingerprints, sim=0.5, timestamps=None, alpha=0.3, method='average',
     clusters [, extra]
     clusters : dict
         We call a list of file names a "cluster".
-        keys = size of clusters (number of elements (images) `csize`)
-        value = list of clusters with that size
-        {csize : [[filename, filename, ...],
-                  [filename, filename, ...],
-                  ...
-                  ],
-         csize : [...]}
+
+        | keys = size of clusters (number of elements (images) `csize`)
+        | value = list of clusters with that size
+
+        ::
+
+            {csize : [[filename, filename, ...],
+                      [filename, filename, ...],
+                      ...
+                      ],
+            csize : [...]}
     extra : dict
         if `extra_out` is True
     """
@@ -242,15 +264,23 @@ def cluster_stats(clusters):
         Array with column 1 = csize sorted (number of images in the cluster)
         and column 2 = cnum (number of clusters with that size).
 
-        [[csize, cnum],
-         [...],
-        ]
+        ::
+
+            [[csize, cnum],
+             [...],
+            ]
     """
     return np.array([[k, len(clusters[k])] for k in
                      np.sort(list(clusters.keys()))], dtype=int)
 
 
 def print_cluster_stats(clusters):
+    """Print cluster stats.
+
+    Parameters
+    ----------
+    clusters : see :func:`cluster`
+    """
     print("#images : #clusters")
     stats = cluster_stats(clusters)
     for csize,cnum in stats:

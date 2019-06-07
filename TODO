@@ -6,3 +6,7 @@
 * Add option to main() for passing a global fingerprints.pk file, which gets
   updated. Remove hard-coded location
   /path/to/pics/imagecluster/fingerprints.pk
+
+* We need an option to pass a list of file names to io.get_image_data(),
+  examples/inria_holiday.sh (old select.sh) is just stooopid. In case we pass
+  in file names, put db files in ./imagecluster/ by default. The end.
