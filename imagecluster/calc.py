@@ -49,16 +49,16 @@ def get_model(layer='fc2'):
     return model
 
 
-def fingerprint(img_arr, model):
+def fingerprint(image, model):
     """Run image array (3d array) run through `model` (``keras.models.Model``).
 
     Parameters
     ----------
-    img_arr : 3d array
+    image : 3d array
         (3,x,y) or (x,y,3), depending on
         ``keras.preprocessing.image.img_to_array`` and ``image_data_format``
         (``channels_{first,last}``) in ``~/.keras/keras.json``, see
-        :func:`~imagecluster.io.read_image_arrays`
+        :func:`~imagecluster.io.read_images`
     model : ``keras.models.Model`` instance
 
     Returns
@@ -77,11 +77,11 @@ def fingerprint(img_arr, model):
     # VGG16).
     #
     # We assme channels_last here. Fix if needed.
-    if img_arr.shape[2] == 1:
-        img_arr = img_arr.repeat(3, axis=2)
+    if image.shape[2] == 1:
+        image = image.repeat(3, axis=2)
 
     # (1, 224, 224, 3)
-    arr4d = np.expand_dims(img_arr, axis=0)
+    arr4d = np.expand_dims(image, axis=0)
 
     # (1, 224, 224, 3)
     arr4d_pp = preprocess_input(arr4d)
@@ -98,23 +98,23 @@ def fingerprint(img_arr, model):
 # (2-4), it won't matter that much. Also, TF was built to run on GPUs, not
 # scale out multi-core CPUs.
 #
-##def _worker(img_arr, model):
+##def _worker(image, model):
 ##    print(fn)
-##    return fn, fingerprint(img_arr, model)
+##    return fn, fingerprint(image, model)
 ##
 ##
-##def fingerprints(image_arrays, model):
+##def fingerprints(images, model):
 ##    _f = functools.partial(_worker, model=model)
 ##    with mp.Pool(int(mp.cpu_count()/2)) as pool:
-##        ret = pool.map(_f, image_arrays.items())
+##        ret = pool.map(_f, images.items())
 ##    return dict(ret)
 
-def fingerprints(image_arrays, model):
-    """Calculate fingerprints for all image arrays in `image_arrays`.
+def fingerprints(images, model):
+    """Calculate fingerprints for all image arrays in `images`.
 
     Parameters
     ----------
-    image_arrays : see :func:`~imagecluster.io.read_image_arrays`
+    images : see :func:`~imagecluster.io.read_images`
     model : see :func:`fingerprint`
 
     Returns
@@ -126,9 +126,9 @@ def fingerprints(image_arrays, model):
          }
     """
     fingerprints = {}
-    for fn,img_arr in image_arrays.items():
+    for fn,image in images.items():
         print(fn)
-        fingerprints[fn] = fingerprint(img_arr, model)
+        fingerprints[fn] = fingerprint(image, model)
     return fingerprints
 
 

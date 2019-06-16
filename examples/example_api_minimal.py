@@ -8,7 +8,7 @@ from imagecluster import calc, io as icio, postproc
 # The bottleneck is calc.fingerprints() called in this function, all other
 # operations are very fast. get_image_data() writes fingerprints to disk and
 # loads them again instead of re-calculating them.
-image_arrays,fingerprints,timestamps = icio.get_image_data('pics/')
+images,fingerprints,timestamps = icio.get_image_data('pics/')
 
 # Run clustering on the fingerprints. Select clusters with similarity index
 # sim=0.5.
@@ -19,4 +19,4 @@ clusters = calc.cluster(fingerprints, sim=0.5)
 postproc.make_links(clusters, 'pics/imagecluster/clusters')
 
 # Plot images arranged in clusters.
-postproc.visualize(clusters, image_arrays)
+postproc.visualize(clusters, images)

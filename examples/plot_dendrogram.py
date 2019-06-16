@@ -7,9 +7,9 @@ from scipy.cluster.hierarchy import dendrogram
 from imagecluster import calc as ic
 from imagecluster import io as icio
 
-image_arrays = icio.read_image_arrays('pics/', size=(224,224))
+images = icio.read_images('pics/', size=(224,224))
 model = ic.get_model()
-fingerprints = ic.fingerprints(image_arrays, model)
+fingerprints = ic.fingerprints(images, model)
 clusters,extra = ic.cluster(fingerprints, sim=0.5, extra_out=True)
 
 # linkage matrix Z

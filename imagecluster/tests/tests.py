@@ -81,10 +81,10 @@ class ImagedirCtx:
 def test_api_get_image_data():
     with ImagedirCtx() as ctx:
         # run 1: create fingerprints database, run clustering
-        image_arrays,fingerprints,timestamps = icio.get_image_data(ctx.imagedir)
+        images,fingerprints,timestamps = icio.get_image_data(ctx.imagedir)
         # run 2: only run clustering, should be much faster, this time use all
         # kwds (test API)
-        image_arrays,fingerprints,timestamps = icio.get_image_data(
+        images,fingerprints,timestamps = icio.get_image_data(
             ctx.imagedir,
             pca_kwds=dict(n_components=0.95),
             model_kwds=dict(layer='fc2'),
@@ -98,9 +98,9 @@ def test_low_level_api_and_clustering():
     # use low level API (same as get_image_data) but call all funcs
     # test clustering
     with ImagedirCtx() as ctx:
-        image_arrays = icio.read_image_arrays(ctx.imagedir, size=(224,224))
+        images = icio.read_images(ctx.imagedir, size=(224,224))
         model = ic.get_model()
-        fingerprints = ic.fingerprints(image_arrays, model)
+        fingerprints = ic.fingerprints(images, model)
         for kk,vv in fingerprints.items():
             assert isinstance(vv, np.ndarray)
             assert len(vv) == 4096, len(vv)

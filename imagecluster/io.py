@@ -135,7 +135,7 @@ def timestamp(filename, source='auto'):
 # (224, 224, 3)
 ##img = image.load_img(filename, target_size=size)
 ##... = image.img_to_array(img)
-def _img_arr_worker(filename, size):
+def _image_worker(filename, size):
     # Handle PIL error "OSError: broken data stream when reading image file".
     # See https://github.com/python-pillow/Pillow/issues/1510 . We have this
     # issue with smartphone panorama JPG files. But instead of bluntly setting
@@ -162,9 +162,8 @@ def _timestamp_worker(filename, source):
         print(f"skipping {filename}: {ex}")
         return filename, None
 
-# XXX nomenclature: Change image_arrays -> images, same as fingerprints then,
-# simpler ...
-def read_image_arrays(imagedir, size, ncores=mp.cpu_count()):
+
+def read_images(imagedir, size, ncores=mp.cpu_count()):
     """Load images from `imagedir` and resize to `size`.
 
     Parameters
@@ -180,7 +179,7 @@ def read_image_arrays(imagedir, size, ncores=mp.cpu_count()):
     dict
         {filename: 3d array (height, width, 3), ...}
     """
-    _f = functools.partial(_img_arr_worker, size=size)
+    _f = functools.partial(_image_worker, size=size)
     with mp.Pool(ncores) as pool:
         ret = pool.map(_f, get_files(imagedir))
     return {k: v for k,v in ret if v is not None}
@@ -213,15 +212,15 @@ def read_timestamps(imagedir, source='auto', ncores=mp.cpu_count()):
 def get_image_data(imagedir, model_kwds=dict(layer='fc2'),
                    img_kwds=dict(size=(224,224)), timestamps_kwds=dict(source='auto'),
                    pca_kwds=None):
-    """Convenience function to create `image_arrays`, `fingerprints`,
+    """Convenience function to create `images`, `fingerprints`,
     `timestamps`.
 
-    It checks for existing `image_arrays` and `fingerprints` database files on
+    It checks for existing `images` and `fingerprints` database files on
     disk and load them if present. Running this again only loads data from
     disk, which is fast. Default locations::
 
        fingerprints: <imagedir>/imagecluster/fingerprints.pk
-       image_arrays: <imagedir>/imagecluster/images.pk
+       images: <imagedir>/imagecluster/images.pk
 
     Parameters
     ----------
@@ -229,7 +228,7 @@ def get_image_data(imagedir, model_kwds=dict(layer='fc2'),
     model_kwds : dict
         passed to :func:`~imagecluster.calc.get_model`
     img_kwds : dict
-        passed to :func:`~imagecluster.io.read_image_arrays`
+        passed to :func:`~imagecluster.io.read_images`
     timestamps_kwds : dict
         passed to :func:`~imagecluster.io.read_timestamps`
     pca_kwds : dict
@@ -238,29 +237,29 @@ def get_image_data(imagedir, model_kwds=dict(layer='fc2'),
 
     Returns
     -------
-    image_arrays : see :func:`~imagecluster.io.read_image_arrays`
+    images : see :func:`~imagecluster.io.read_images`
     fingerprints : see :func:`~imagecluster.calc.fingerprints`
     timestamps : see :func:`~imagecluster.io.read_timestamps`
     """
     fingerprints_fn = pj(imagedir, ic_base_dir, 'fingerprints.pk')
-    image_arrays_fn = pj(imagedir, ic_base_dir, 'images.pk')
-    if os.path.exists(image_arrays_fn):
-        print(f"reading image arrays {image_arrays_fn} ...")
-        image_arrays = read_pk(image_arrays_fn)
+    images_fn = pj(imagedir, ic_base_dir, 'images.pk')
+    if os.path.exists(images_fn):
+        print(f"reading image arrays {images_fn} ...")
+        images = read_pk(images_fn)
     else:
-        print(f"create image arrays {image_arrays_fn}")
-        image_arrays = read_image_arrays(imagedir, **img_kwds)
-        write_pk(image_arrays, image_arrays_fn)
+        print(f"create image arrays {images_fn}")
+        images = read_images(imagedir, **img_kwds)
+        write_pk(images, images_fn)
     if os.path.exists(fingerprints_fn):
         print(f"reading fingerprints {fingerprints_fn} ...")
         fingerprints = read_pk(fingerprints_fn)
     else:
         print(f"create fingerprints {fingerprints_fn}")
-        fingerprints = ic.fingerprints(image_arrays, ic.get_model(**model_kwds))
+        fingerprints = ic.fingerprints(images, ic.get_model(**model_kwds))
         if pca_kwds is not None:
             fingerprints = ic.pca(fingerprints, **pca_kwds)
         write_pk(fingerprints, fingerprints_fn)
     print(f"reading timestamps ...")
     if timestamps_kwds is not None:
         timestamps = read_timestamps(imagedir, **timestamps_kwds)
-    return image_arrays, fingerprints, timestamps
+    return images, fingerprints, timestamps
