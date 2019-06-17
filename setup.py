@@ -15,7 +15,7 @@ with open(os.path.join(here, 'README.rst'), encoding='utf-8') as fd:
 
 setup(
     name='imagecluster',
-    version='0.3.0',
+    version='0.4.0',
     description='cluster images based on image content using a pre-trained ' \
 'deep neural network and hierarchical clustering',
     long_description=long_description,
