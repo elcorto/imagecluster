@@ -19,9 +19,9 @@ logging.getLogger("tensorflow").setLevel(logging.CRITICAL)
 
 pj = os.path.join
 
+
 # TODO re-use ImagedirCtx where possible, we write files in each context,
 # re-use ctxs which don't alter the files
-
 class ImagedirCtx:
     def __init__(self, fmt='png'):
         assert fmt in ['jpg', 'png']

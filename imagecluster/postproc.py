@@ -1,6 +1,5 @@
 import os
 import shutil
-import functools
 
 from matplotlib import pyplot as plt
 import numpy as np
