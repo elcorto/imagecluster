@@ -29,7 +29,11 @@ def plot_clusters(clusters, images, max_csize=None, mem_limit=1024**3):
     if max_csize is not None:
         stats = stats[stats[:,0] <= max_csize, :]
     # number of clusters
-    ncols = stats[:,1].sum()
+    try:
+        ncols = stats[:, 1].sum()
+    except IndexError:
+        print('Similarity is too high, each image is its own cluster, no need to visualize it.')
+        return
     # csize (number of images per cluster)
     nrows = stats[:,0].max()
     shape = images[list(images.keys())[0]].shape[:2]
