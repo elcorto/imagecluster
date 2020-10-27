@@ -10,3 +10,6 @@
 * We need an option to pass a list of file names to io.get_image_data(),
   examples/inria_holiday.sh (old select.sh) is just stooopid. In case we pass
   in file names, put db files in ./imagecluster/ by default. The end.
+
+* Apply time distance scaling to fingerprints in an extra function outside of
+  cluster() such that we can play around with scaled fingerprints.
