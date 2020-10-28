@@ -26,7 +26,7 @@ def plot_clusters(clusters, images, max_csize=None, mem_limit=1024**3):
         max(csize) and (iv) max_csize is large or None
     """
     if len(clusters) < 1:
-        print('Similarity is too high, each image is its own cluster, no need to visualize it.')
+        print('No cluster meets the requirements of sim and min_csize, can\'t visualize it.')
         return
     stats = ic.cluster_stats(clusters)
     if max_csize is not None:
