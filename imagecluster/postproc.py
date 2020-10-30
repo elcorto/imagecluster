@@ -25,9 +25,7 @@ def plot_clusters(clusters, images, max_csize=None, mem_limit=1024**3):
         have (i) enough memory, (ii) many clusters and/or (iii) large
         max(csize) and (iv) max_csize is large or None
     """
-    if len(clusters) < 1:
-        print('No cluster meets the requirements of sim and min_csize, can\'t visualize it.')
-        return
+    assert len(clusters) > 0, "`clusters` is empty"
     stats = ic.cluster_stats(clusters)
     if max_csize is not None:
         stats = stats[stats[:,0] <= max_csize, :]
