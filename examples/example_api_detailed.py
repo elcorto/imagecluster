@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Detailed API example. We show which functions are called inside
 # get_image_data() (read_images(), get_model(), fingerprints(), pca(),
