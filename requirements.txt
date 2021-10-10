@@ -1,10 +1,9 @@
 # ~150 MB (pip)
-tensorflow-cpu
+tensorflow-cpu >= 2
 # If you have a GPU. > 500 MB (pip) .. come on, really?
 ##tensorflow
 
 numpy
-keras
 Pillow
 scikit-learn
 matplotlib

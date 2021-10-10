@@ -5,7 +5,7 @@ import os
 import pickle
 import re
 
-from keras.preprocessing import image
+from tensorflow.keras.preprocessing import image
 import PIL.Image
 
 from . import exceptions
